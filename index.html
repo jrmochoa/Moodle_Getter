@@ -1,0 +1,651 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+    <meta http-equiv="Content-Security-Policy" content="frame-ancestors 'none'">
+    <title>Moodle Activity Report</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="./public/style.css" rel="stylesheet">
+</head>
+<body class="min-h-screen bg-gradient-to-br from-slate-100 to-slate-200 p-6 text-slate-800 font-sans">
+
+<div class="max-w-7xl mx-auto">
+
+    <div class="text-center mb-8">
+        <h1 class="text-4xl font-bold bg-gradient-to-r from-slate-700 to-sky-700 bg-clip-text text-transparent">
+            Moodle Activity Report
+        </h1>
+        <p class="text-slate-500 mt-2 text-sm">
+            Event: <span class="font-semibold text-sky-700">Course module created</span> &bull;
+            Sorted oldest to newest &bull; Dates in MM/DD/YYYY
+        </p>
+    </div>
+
+    <!-- Config -->
+    <div class="bg-white rounded-3xl shadow-xl border border-slate-100 p-7 mb-6">
+        <div class="flex flex-wrap gap-5 items-end mb-4">
+
+            <div class="flex-1 min-w-[220px]">
+                <label class="block text-xs font-bold uppercase tracking-wider text-sky-800 mb-1.5">Moodle Site URL</label>
+                <input type="text" id="moodleUrl" placeholder="https://yourmoodle.edu" value="https://uslt.aralinks.com"
+                    class="w-full px-4 py-2.5 rounded-xl border border-slate-200 bg-slate-50 text-sm font-mono
+                           focus:outline-none focus:border-sky-500 focus:ring-2 focus:ring-sky-200 transition">
+            </div>
+
+            <div class="flex-1 min-w-[220px]">
+                <label class="block text-xs font-bold uppercase tracking-wider text-sky-800 mb-1.5">Web Service Token</label>
+                <input type="password" id="wsToken" value="25c2beae0f2919fcc1b10a953d5b3511" placeholder="Token"
+                    class="w-full px-4 py-2.5 rounded-xl border border-slate-200 bg-slate-50 text-sm font-mono
+                           focus:outline-none focus:border-sky-500 focus:ring-2 focus:ring-sky-200 transition">
+                <p class="text-xs text-slate-400 mt-1">moodle_mobile_app service token</p>
+            </div>
+
+            <div class="flex-1 min-w-[150px] max-w-[200px]">
+                <label class="block text-xs font-bold uppercase tracking-wider text-sky-800 mb-1.5">Course ID</label>
+                <input type="number" id="courseId" placeholder="e.g. 2" value="2"
+                    class="w-full px-4 py-2.5 rounded-xl border border-slate-200 bg-slate-50 text-sm font-mono
+                           focus:outline-none focus:border-sky-500 focus:ring-2 focus:ring-sky-200 transition">
+            </div>
+
+            <div class="flex-1 min-w-[220px]">
+                <label class="block text-xs font-bold uppercase tracking-wider text-sky-800 mb-1.5">
+                    Moodle Session Cookie
+                    <span class="ml-1 text-[10px] font-normal text-slate-400 normal-case">(needed to read log pages)</span>
+                </label>
+                <input value="MoodleSession=iv65aed8p2o04kemdbgi9dl6pj" type="password" id="sessionKey" placeholder="MoodleSession=abc123..." 
+                    class="w-full px-4 py-2.5 rounded-xl border border-slate-200 bg-slate-50 text-sm font-mono
+                           focus:outline-none focus:border-sky-500 focus:ring-2 focus:ring-sky-200 transition">
+                <p class="text-xs text-slate-400 mt-1">
+                    From browser DevTools → Application → Cookies → <code>MoodleSession</code> value
+                </p>
+            </div>
+
+            <button id="fetchBtn"
+                class="px-6 py-2.5 bg-gradient-to-r from-sky-700 to-sky-900 text-white font-bold rounded-full text-sm
+                       hover:-translate-y-0.5 hover:shadow-lg active:translate-y-0 transition-all whitespace-nowrap">
+                Generate Report
+            </button>
+        </div>
+
+        <!-- Session cookie help -->
+        <details class="mt-3">
+            <summary class="text-xs text-sky-700 font-semibold cursor-pointer hover:underline">
+                📋 How to get your Session Cookie
+            </summary>
+            <div class="mt-2 text-xs text-slate-600 bg-slate-50 rounded-xl p-4 space-y-1.5 leading-relaxed">
+                <p><strong>Chrome / Edge:</strong> Press <kbd class="bg-white border px-1 rounded">F12</kbd> → Application tab → Cookies (left panel) → click your Moodle URL → find <code>MoodleSession</code> → copy the <strong>Value</strong>.</p>
+                <p><strong>Firefox:</strong> Press <kbd class="bg-white border px-1 rounded">F12</kbd> → Storage tab → Cookies → find <code>MoodleSession</code> → copy Value.</p>
+                <p class="text-amber-700 font-semibold">⚠ You must be logged into Moodle in the same browser. The session expires when you log out.</p>
+                <p class="text-slate-400">Why? Your Moodle doesn't expose log data via web services, so we read the log report pages directly — which requires your active login session.</p>
+            </div>
+        </details>
+
+        <div id="statusMessage"
+            class="mt-4 px-4 py-3 rounded-xl bg-slate-100 border-l-4 border-sky-500 text-sm text-slate-700">
+            Enter credentials and click Generate Report.
+        </div>
+
+        <!-- Progress bar -->
+        <div id="progressWrap" class="hidden mt-3">
+            <div class="flex justify-between text-xs text-slate-500 mb-1">
+                <span id="progressLabel">Fetching logs…</span>
+                <span id="progressPct">0%</span>
+            </div>
+            <div class="w-full bg-slate-100 rounded-full h-2">
+                <div id="progressBar" class="bg-sky-600 h-2 rounded-full transition-all duration-300" style="width:0%"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- CORS notice (shown only if scraping fails) -->
+    <div id="corsNotice" class="hidden bg-amber-50 border border-amber-200 rounded-3xl p-6 mb-6">
+        <h3 class="font-bold text-amber-800 mb-2">⚠ Browser blocked the log page request (CORS)</h3>
+        <p class="text-sm text-amber-700 mb-3">
+            Your browser won't let this page fetch log data from <code>uslt.aralinks.com</code> directly due to cross-origin restrictions.
+            To fix this, open this HTML file on the <strong>same domain</strong> as Moodle, or use one of these options:
+        </p>
+        <ul class="text-sm text-amber-700 list-disc list-inside space-y-1">
+            <li>Upload this file to your Moodle server and open it from there</li>
+            <li>Use a browser extension like <strong>CORS Unblock</strong> (for testing only)</li>
+            <li>Ask your admin to expose <code>core_course_get_logs</code> via web services</li>
+        </ul>
+    </div>
+
+    <!-- Results -->
+    <div class="bg-white rounded-3xl shadow-xl border border-slate-100 p-7 mb-6">
+
+        <div class="flex flex-wrap gap-3 items-center mb-4">
+            <h3 class="text-lg font-bold text-slate-700">Course module created — Activity Log</h3>
+            <span id="rowCount" class="px-4 py-1 bg-slate-100 text-slate-600 rounded-full text-xs font-semibold">0 entries</span>
+            <button id="exportBtn"
+                class="hidden px-5 py-2 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-full text-sm transition">
+                Export to CSV
+            </button>
+        </div>
+
+        <div id="courseNameSection"
+            class="hidden mb-5 px-5 py-3 bg-gradient-to-r from-sky-50 to-sky-100 border-l-4 border-sky-500 rounded-2xl">
+            <p class="text-xs font-bold uppercase tracking-wider text-sky-600">Course</p>
+            <p id="courseNameDisplay" class="text-xl font-bold text-slate-800 mt-0.5"></p>
+        </div>
+
+        <div class="overflow-x-auto rounded-2xl border border-slate-100">
+            <table class="w-full text-sm border-collapse">
+                <thead>
+                    <tr class="bg-slate-800 text-white text-left">
+                        <th class="px-4 py-3 font-semibold whitespace-nowrap">#</th>
+                        <th class="px-4 py-3 font-semibold whitespace-nowrap">Date Created</th>
+                        <th class="px-4 py-3 font-semibold">Created By</th>
+                        <th class="px-4 py-3 font-semibold">Activity Name</th>
+                        <th class="px-4 py-3 font-semibold whitespace-nowrap">Activity Type</th>
+                        <th class="px-4 py-3 font-semibold whitespace-nowrap text-center">Logs</th>
+                    </tr>
+                </thead>
+                <tbody id="reportTbody">
+                    <tr>
+                        <td colspan="6" class="text-center py-14 text-slate-400 italic">
+                            No data yet. Enter credentials and click Generate Report.
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <footer class="text-center text-xs text-slate-400 pb-4">
+        Date &amp; creator parsed directly from Moodle log report pages &bull;
+        <span class="inline-flex items-center gap-1"><span class="w-2 h-2 rounded-full bg-emerald-400 inline-block"></span> LOG = confirmed from log page</span> &bull;
+        <span class="inline-flex items-center gap-1"><span class="w-2 h-2 rounded-full bg-amber-400 inline-block"></span> EST = fallback (mod.added)</span>
+    </footer>
+</div>
+
+<script>
+    const statusDiv  = document.getElementById('statusMessage');
+    const tbody      = document.getElementById('reportTbody');
+    const rowCountEl = document.getElementById('rowCount');
+    const exportBtn  = document.getElementById('exportBtn');
+    const progressWrap = document.getElementById('progressWrap');
+    const progressBar  = document.getElementById('progressBar');
+    const progressPct  = document.getElementById('progressPct');
+    const progressLabel = document.getElementById('progressLabel');
+
+    let tableData = [];
+    let currentCourseName = '';
+
+    // ── Local proxy detection ─────────────────────────────────────────────────
+    // When opened via file:// or http://localhost, all requests go through the
+    // local server.js / server.py proxy which strips CORS restrictions.
+    const PROXY_BASE = 'http://localhost:8080';
+
+    function isLocal() {
+        return location.protocol === 'file:' ||
+               location.hostname === 'localhost' ||
+               location.hostname === '127.0.0.1';
+    }
+
+    // Wraps a Moodle API URL for proxy use when running locally
+    function apiProxyUrl(targetUrl) {
+        if (!isLocal()) return targetUrl;
+        return `${PROXY_BASE}/proxy?url=${encodeURIComponent(targetUrl)}&accept=application%2Fjson`;
+    }
+
+    // Wraps a Moodle HTML page URL for proxy use (includes session cookie forwarding)
+    function htmlProxyUrl(targetUrl, cookie) {
+        if (!isLocal()) return targetUrl;
+        let u = `${PROXY_BASE}/proxy?url=${encodeURIComponent(targetUrl)}&accept=text%2Fhtml`;
+        if (cookie) u += `&cookie=${encodeURIComponent(cookie)}`;
+        return u;
+    }
+
+    const MODULE_FULLNAMES = {
+        assign:'Assignment', quiz:'Quiz', forum:'Forum', resource:'File',
+        page:'Page', url:'URL', folder:'Folder', label:'Text and Media Area',
+        choice:'Choice', feedback:'Feedback', lesson:'Lesson',
+        scorm:'SCORM Package', workshop:'Workshop', glossary:'Glossary',
+        chat:'Chat', attendance:'Attendance', bigbluebuttonbn:'BigBlueButton',
+        book:'Book', data:'Database', h5pactivity:'H5P',
+        imscp:'IMS Content Package', lti:'External Tool', survey:'Survey',
+        wiki:'Wiki', hvp:'Interactive Content', questionnaire:'Questionnaire',
+        certificate:'Certificate', customcert:'Custom Certificate',
+        subcourse:'Subcourse', scheduler:'Scheduler', checklist:'Checklist',
+    };
+    const modFullName = m => MODULE_FULLNAMES[m] || (m ? m.charAt(0).toUpperCase()+m.slice(1) : 'Unknown');
+
+    function setStatus(msg, isError=false) {
+        statusDiv.textContent = msg;
+        statusDiv.className = isError
+            ? 'mt-4 px-4 py-3 rounded-xl border-l-4 border-red-500 bg-red-50 text-sm text-red-700'
+            : 'mt-4 px-4 py-3 rounded-xl border-l-4 border-sky-500 bg-slate-100 text-sm text-slate-700';
+    }
+
+    function setProgress(current, total, label='') {
+        const pct = total > 0 ? Math.round((current / total) * 100) : 0;
+        progressBar.style.width = pct + '%';
+        progressPct.textContent = pct + '%';
+        if (label) progressLabel.textContent = label;
+    }
+
+    function escapeHtml(s) {
+        if (!s) return '';
+        return String(s).replace(/[&<>"']/g, c =>
+            ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+    }
+
+    function formatDate(ts) {
+        if (!ts || ts === 0) return 'N/A';
+        const n = Number(ts);
+        if (isNaN(n) || n <= 0) return 'N/A';
+        const d = n > 1e10 ? new Date(n) : new Date(n * 1000);
+        if (isNaN(d.getTime())) return 'N/A';
+        const mm = String(d.getMonth()+1).padStart(2,'0');
+        const dd = String(d.getDate()).padStart(2,'0');
+        return `${mm}/${dd}/${d.getFullYear()}`;
+    }
+
+    const FILE_CATS = {
+        // Application
+        apk:'Application', exe:'Application', msi:'Application', dmg:'Application',
+        deb:'Application', rpm:'Application', jar:'Application', bat:'Application',
+        // Audio
+        mp3:'Audio', wav:'Audio', ogg:'Audio', flac:'Audio', aac:'Audio',
+        m4a:'Audio', wma:'Audio', opus:'Audio',
+        // Documents
+        pdf:'Documents', doc:'Documents', docx:'Documents', xls:'Documents',
+        xlsx:'Documents', txt:'Documents', rtf:'Documents', odt:'Documents',
+        ods:'Documents', csv:'Documents',
+        // Image
+        jpg:'Image', jpeg:'Image', png:'Image', gif:'Image', bmp:'Image',
+        svg:'Image', webp:'Image', tiff:'Image', tif:'Image', ico:'Image',
+        // Presentation
+        ppt:'Presentation', pptx:'Presentation', odp:'Presentation', key:'Presentation',
+        // Video
+        mp4:'Video', avi:'Video', mov:'Video', mkv:'Video', wmv:'Video',
+        flv:'Video', webm:'Video', m4v:'Video', '3gp':'Video',
+    };
+
+    function fileExtension(mod) {
+        if (!mod?.contents) return null;
+        for (const c of mod.contents) {
+            if (c.filename) {
+                const p = c.filename.split('.');
+                if (p.length > 1) { const e = p.pop().toLowerCase(); if (e.length <= 5) return e; }
+            }
+        }
+        return null;
+    }
+
+    function activityTypeLabel(modname, mod) {
+        if (!modname) return 'Unknown';
+        if (modname === 'resource') {
+            const ext = fileExtension(mod);
+            if (ext) {
+                const cat = FILE_CATS[ext];
+                return cat ? `File - ${cat}` : `File - ${ext.toUpperCase()}`;
+            }
+            return 'File';
+        }
+        return modFullName(modname);
+    }
+
+    function activityViewUrl(mod, baseUrl) {
+        const id = mod.id || mod.instance;
+        return (id && mod.modname) ? `${baseUrl}/mod/${mod.modname}/view.php?id=${id}` : null;
+    }
+
+    function buildLogUrl(baseUrl, courseId, modId, page) {
+        let u = `${baseUrl}/report/log/index.php?chooselog=1&showusers=0&showcourses=0` +
+                `&id=${courseId}&group=&user=&date=&modid=${modId}&modaction=c` +
+                `&origin=&edulevel=-1&logreader=logstore_standard`;
+        if (page > 0) u += `&page=${page}`;
+        return u;
+    }
+
+    // ── WS API ─────────────────────────────────────────────────────────────────
+    const userCache = new Map();
+
+    async function apiFetch(baseUrl, token, fn, extra={}) {
+        const p = new URLSearchParams({wstoken:token, wsfunction:fn, moodlewsrestformat:'json', ...extra});
+        const rawUrl = `${baseUrl}/webservice/rest/server.php?${p}`;
+        const res = await fetch(apiProxyUrl(rawUrl), {headers:{Accept:'application/json'}});
+        if (!res.ok) throw new Error(`HTTP ${res.status}: ${res.statusText}`);
+        const data = await res.json();
+        if (data?.exception) throw new Error(data.message || data.exception);
+        if (data?.error)     throw new Error(data.error);
+        return data;
+    }
+
+    async function fetchCourseName(baseUrl, token, courseId) {
+        try {
+            const p = new URLSearchParams({wstoken:token, wsfunction:'core_course_get_courses', moodlewsrestformat:'json'});
+            p.append('options[ids][0]', String(courseId));
+            const rawUrl = `${baseUrl}/webservice/rest/server.php?${p}`;
+            const res = await fetch(apiProxyUrl(rawUrl), {headers:{Accept:'application/json'}});
+            const data = await res.json();
+            if (Array.isArray(data) && data.length > 0) return data[0].fullname || data[0].shortname || null;
+        } catch(_) {}
+        return null;
+    }
+
+    async function fetchFirstAccessor(baseUrl, token, courseId) {
+        try {
+            const data = await apiFetch(baseUrl, token, 'core_enrol_get_enrolled_users', {courseid:String(courseId)});
+            if (Array.isArray(data) && data.length > 0) {
+                const pool = data.filter(u => u.firstaccess > 0);
+                const src = pool.length > 0 ? pool : data;
+                src.sort((a,b) => (a.firstaccess||0)-(b.firstaccess||0));
+                const u = src[0];
+                if (u?.fullname) return {fullname:u.fullname, profileUrl:`${baseUrl}/user/profile.php?id=${u.id}`};
+            }
+        } catch(_) {}
+        return null;
+    }
+
+    // ── Log page helpers ──────────────────────────────────────────────────────
+
+    function parseMoodleDate(raw) {
+        if (!raw) return null;
+        const d = new Date(raw);
+        if (!isNaN(d.getTime())) {
+            const mm = String(d.getMonth()+1).padStart(2,'0');
+            const dd = String(d.getDate()).padStart(2,'0');
+            return `${mm}/${dd}/${d.getFullYear()}`;
+        }
+        const m1 = raw.match(/(\d{1,2})\s+([A-Za-z]+)\s+(\d{4})/);
+        if (m1) {
+            const d2 = new Date(`${m1[2]} ${m1[1]}, ${m1[3]}`);
+            if (!isNaN(d2.getTime())) {
+                const mm = String(d2.getMonth()+1).padStart(2,'0');
+                const dd = String(d2.getDate()).padStart(2,'0');
+                return `${mm}/${dd}/${d2.getFullYear()}`;
+            }
+        }
+        return null;
+    }
+
+    // Fetch a log page URL and return a parsed document, or null on failure
+    async function fetchLogDoc(url, sessionCookie) {
+        try {
+            let res;
+            if (isLocal()) {
+                res = await fetch(htmlProxyUrl(url, sessionCookie), {
+                    headers: { 'Accept': 'text/html,application/xhtml+xml' }
+                });
+            } else {
+                const headers = { 'Accept': 'text/html,application/xhtml+xml' };
+                if (sessionCookie) headers['Cookie'] = `MoodleSession=${sessionCookie}`;
+                res = await fetch(url, { credentials: 'include', headers });
+            }
+            if (!res.ok) return null;
+            return new DOMParser().parseFromString(await res.text(), 'text/html');
+        } catch(e) {
+            if (e.message?.includes('Failed to fetch') || e.name === 'TypeError') {
+                document.getElementById('corsNotice').classList.remove('hidden');
+            }
+            return null;
+        }
+    }
+
+    // Find the highest page= number from pagination links in a document
+    function parseLastPageNum(doc) {
+        let max = 0;
+        for (const a of doc.querySelectorAll('a[href*="page="]')) {
+            const href = a.getAttribute('href') || '';
+            const m = href.match(/[?&]page=(\d+)/);
+            if (m) { const n = parseInt(m[1], 10); if (n > max) max = n; }
+        }
+        return max;
+    }
+
+    // Scan a document for "Course module created" rows and return {date,fullname,profileUrl}
+    function parseCreatedEvent(doc) {
+        const candidates = [
+            ...doc.querySelectorAll('table.generaltable tbody tr'),
+            ...doc.querySelectorAll('table[data-region="report-table"] tbody tr'),
+            ...doc.querySelectorAll('#report_log table tbody tr'),
+            ...doc.querySelectorAll('tr'),
+        ];
+        const seen = new WeakSet();
+        for (const row of candidates) {
+            if (seen.has(row)) continue;
+            seen.add(row);
+            const cells = row.querySelectorAll('td');
+            if (cells.length < 2) continue;
+            let found = false;
+            for (const cell of cells) {
+                if (cell.textContent.trim().toLowerCase().includes('course module created')) { found = true; break; }
+            }
+            if (!found) continue;
+            const rawDate = cells[0]?.textContent?.trim() || '';
+            let fullname = '', profileUrl = '';
+            for (let i = 0; i < Math.min(cells.length, 4); i++) {
+                const link = cells[i].querySelector('a[href*="/user/"]');
+                if (link) { fullname = link.textContent.trim(); profileUrl = link.href; break; }
+            }
+            const parsedDate = parseMoodleDate(rawDate);
+            if (parsedDate || fullname) return { date: parsedDate || rawDate, fullname, profileUrl };
+        }
+        return null;
+    }
+
+    // Fetch and scrape the log page for a module.
+    // "Course module created" is the oldest entry so it lives on the LAST page
+    // (Moodle sorts newest-first). Strategy: fetch page 0 to get pagination,
+    // then fetch the last page where the creation event actually is.
+    async function scrapeLogPage(baseUrl, courseId, cmid, sessionCookie) {
+        const page0Url = buildLogUrl(baseUrl, courseId, cmid, 0);
+        const doc0 = await fetchLogDoc(page0Url, sessionCookie);
+        if (!doc0) return null;
+
+        // Fast path: new modules with few entries — creation event is on page 0
+        const fromPage0 = parseCreatedEvent(doc0);
+        if (fromPage0) return fromPage0;
+
+        // Determine last page number from pagination links
+        const lastPage = parseLastPageNum(doc0);
+        if (lastPage <= 0) return null; // single page, event not found
+
+        // Fetch the last page — that is where the oldest (creation) event lives
+        const docLast = await fetchLogDoc(buildLogUrl(baseUrl, courseId, cmid, lastPage), sessionCookie);
+        if (!docLast) return null;
+
+        return parseCreatedEvent(docLast);
+    }
+
+    // ── Build rows (parallel batched fetching) ────────────────────────────────
+    async function buildRows(sections, token, baseUrl, courseId, sessionCookie, fallbackUser) {
+        const allMods = sections.flatMap(s => s.modules || []);
+        const total   = allMods.length;
+        let done = 0;
+        progressWrap.classList.remove('hidden');
+        setProgress(0, total, `Fetching ${total} log pages…`);
+
+        const BATCH = 6; // concurrent requests — fast but not hammering the server
+        const results = new Array(allMods.length);
+
+        for (let start = 0; start < allMods.length; start += BATCH) {
+            const slice = allMods.slice(start, start + BATCH);
+            const settled = await Promise.allSettled(
+                slice.map(mod => scrapeLogPage(baseUrl, courseId, mod.id, sessionCookie))
+            );
+            settled.forEach((r, i) => { results[start + i] = r.value ?? null; });
+            done += slice.length;
+            setProgress(done, total, `Fetched ${done} / ${total}…`);
+        }
+
+        const rows = allMods.map((mod, i) => {
+            const logData  = results[i];
+            return {
+                date:         logData?.date       || formatDate(mod.added || mod.timecreated || mod.timemodified || 0),
+                rawTs:        mod.added            || mod.timecreated || 0,
+                fromLog:      !!logData,
+                fullname:     logData?.fullname    || fallbackUser?.fullname   || 'Unknown',
+                profileUrl:   logData?.profileUrl  || fallbackUser?.profileUrl || null,
+                activityName: mod.name             || `Unnamed ${mod.modname}`,
+                activityUrl:  activityViewUrl(mod, baseUrl),
+                activityType: activityTypeLabel(mod.modname, mod),
+                logUrl:       buildLogUrl(baseUrl, courseId, mod.id),
+            };
+        });
+
+        setProgress(total, total, 'Done!');
+        setTimeout(() => progressWrap.classList.add('hidden'), 1500);
+
+        rows.sort((a, b) => (a.rawTs && b.rawTs) ? a.rawTs - b.rawTs : a.date.localeCompare(b.date));
+        return rows;
+    }
+
+    // ── Render ─────────────────────────────────────────────────────────────────
+    function renderTable(rows) {
+        tbody.innerHTML = '';
+        if (!rows?.length) {
+            tbody.innerHTML = '<tr><td colspan="6" class="text-center py-14 text-slate-400 italic">No activities found.</td></tr>';
+            rowCountEl.textContent = '0 entries';
+            exportBtn.classList.add('hidden');
+            return;
+        }
+
+        const frag = document.createDocumentFragment();
+        rows.forEach((row, idx) => {
+            const tr = document.createElement('tr');
+            tr.className = 'border-b border-slate-100 hover:bg-sky-50 transition-colors';
+
+            // #
+            const tdNum = document.createElement('td');
+            tdNum.className = 'px-4 py-3 text-slate-400 text-xs font-mono';
+            tdNum.textContent = idx + 1;
+
+            // Date + badge
+            const tdDate = document.createElement('td');
+            tdDate.className = 'px-4 py-3 whitespace-nowrap';
+            const badge = row.fromLog
+                ? `<span class="ml-1.5 text-[10px] font-bold bg-emerald-100 text-emerald-700 border border-emerald-200 px-1.5 py-0.5 rounded-full">LOG</span>`
+                : `<span class="ml-1.5 text-[10px] font-bold bg-amber-100 text-amber-700 border border-amber-200 px-1.5 py-0.5 rounded-full" title="Could not read log page — using mod.added">EST</span>`;
+            tdDate.innerHTML = `<span class="font-mono text-xs bg-slate-100 text-slate-700 px-2.5 py-1 rounded-lg font-semibold">${escapeHtml(row.date)}</span>${badge}`;
+
+            // Created By
+            const tdUser = document.createElement('td');
+            tdUser.className = 'px-4 py-3';
+            tdUser.innerHTML = row.profileUrl
+                ? `<a href="${escapeHtml(row.profileUrl)}" target="_blank" rel="noopener"
+                      class="text-sky-700 font-semibold hover:text-sky-900 hover:underline">${escapeHtml(row.fullname)}</a>`
+                : `<span class="text-slate-600">${escapeHtml(row.fullname)}</span>`;
+
+            // Activity Name
+            const tdName = document.createElement('td');
+            tdName.className = 'px-4 py-3';
+            tdName.innerHTML = row.activityUrl
+                ? `<a href="${escapeHtml(row.activityUrl)}" target="_blank" rel="noopener"
+                      class="text-violet-700 font-semibold hover:text-violet-900 hover:underline">${escapeHtml(row.activityName)}</a>`
+                : `<span class="text-slate-700 font-medium">${escapeHtml(row.activityName)}</span>`;
+
+            // Activity Type
+            const tdType = document.createElement('td');
+            tdType.className = 'px-4 py-3';
+            tdType.innerHTML = `<span class="text-xs font-semibold bg-sky-50 text-sky-800 border border-sky-200 px-3 py-1 rounded-full">${escapeHtml(row.activityType)}</span>`;
+
+            // View Logs
+            const tdLog = document.createElement('td');
+            tdLog.className = 'px-4 py-3 text-center';
+            tdLog.innerHTML = `<a href="${escapeHtml(row.logUrl)}" target="_blank" rel="noopener"
+                class="inline-flex items-center gap-1.5 px-3 py-1.5 bg-slate-700 hover:bg-sky-700 text-white text-xs font-bold rounded-full transition-colors whitespace-nowrap">
+                <svg xmlns="http://www.w3.org/2000/svg" class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                    <path stroke-linecap="round" stroke-linejoin="round"
+                        d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/>
+                </svg>
+                View Logs
+            </a>`;
+
+            tr.append(tdNum, tdDate, tdUser, tdName, tdType, tdLog);
+            frag.appendChild(tr);
+        });
+        tbody.appendChild(frag);
+
+        const n = rows.length;
+        rowCountEl.textContent = `${n} ${n===1?'entry':'entries'}`;
+        exportBtn.classList.remove('hidden');
+    }
+
+    // ── CSV ──────────────────────────────────────────────────────────────────────────────
+    function coursePrefix(name) {
+        // "168 - Care of Clients..." → "168 - "
+        const m = (name || '').match(/^(\d+)\s*-\s*/);
+        return m ? `${m[1]} - ` : '';
+    }
+
+    function exportCSV(rows, courseId) {
+        if (!rows.length) { setStatus('Nothing to export.', true); return; }
+        const prefix = coursePrefix(currentCourseName);
+        const hdr  = ['Date', 'Created By', 'Activity Name', 'Activity Type'];
+        const body = rows.map(r => [
+            r.date,
+            r.fullname,
+            prefix + r.activityName,
+            r.activityType,
+        ]);
+        const csv = [hdr,...body].map(r=>r.map(c=>`"${String(c).replace(/"/g,'""')}"`).join(',')).join('\n');
+        const blob = new Blob(['﻿'+csv], {type:'text/csv;charset=utf-8;'});
+        const a = document.createElement('a');
+        a.href = URL.createObjectURL(blob);
+        a.download = `moodle_course_${courseId}_module_created.csv`;
+        document.body.appendChild(a); a.click(); document.body.removeChild(a);
+        setStatus(`Exported ${rows.length} entries.`);
+    }
+
+    // ── Main ───────────────────────────────────────────────────────────────────
+    document.getElementById('fetchBtn').addEventListener('click', async () => {
+        const rawUrl       = document.getElementById('moodleUrl').value.trim();
+        const token        = document.getElementById('wsToken').value.trim();
+        const courseId     = parseInt(document.getElementById('courseId').value.trim(), 10);
+        const sessionCookie = document.getElementById('sessionKey').value.trim();
+
+        if (!rawUrl)                          { setStatus('Please enter your Moodle site URL.', true); return; }
+        if (!token)                           { setStatus('Web service token is required.', true); return; }
+        if (isNaN(courseId) || courseId <= 0) { setStatus('Please enter a valid numeric Course ID.', true); return; }
+
+        const baseUrl = rawUrl.endsWith('/') ? rawUrl.slice(0,-1) : rawUrl;
+
+        document.getElementById('corsNotice').classList.add('hidden');
+        tbody.innerHTML = '<tr><td colspan="6" class="text-center py-14 text-slate-400 italic">Loading…</td></tr>';
+        rowCountEl.textContent = 'loading…';
+        exportBtn.classList.add('hidden');
+        document.getElementById('courseNameSection').classList.add('hidden');
+        tableData = [];
+        setStatus('Fetching course contents…');
+
+        try {
+            const [courseName, sections, fallbackUser] = await Promise.all([
+                fetchCourseName(baseUrl, token, courseId),
+                apiFetch(baseUrl, token, 'core_course_get_contents', {courseid:String(courseId)}),
+                fetchFirstAccessor(baseUrl, token, courseId),
+            ]);
+
+            currentCourseName = courseName || '';
+            document.getElementById('courseNameDisplay').textContent = courseName || `Course ID: ${courseId}`;
+            document.getElementById('courseNameSection').classList.remove('hidden');
+
+            const total = sections.reduce((n,s) => n+(s.modules?.length||0), 0);
+            setStatus(`Found ${total} module(s). Reading log pages one by one…`);
+
+            tableData = await buildRows(sections, token, baseUrl, courseId, sessionCookie, fallbackUser);
+
+            const logCount = tableData.filter(r => r.fromLog).length;
+            setStatus(`Done. ${tableData.length} module(s) — ${logCount} with real log date & creator, ${tableData.length-logCount} estimated.`);
+            renderTable(tableData);
+
+        } catch (err) {
+            console.error(err);
+            let msg = err.message;
+            if (msg.includes('Invalid token') || msg.includes('Access control')) msg = 'Invalid token or insufficient permissions.';
+            else if (msg.includes('Course not found')) msg = `Course ID ${courseId} not found.`;
+            setStatus(msg, true);
+            tbody.innerHTML = `<tr><td colspan="6" class="text-center py-14 text-red-500 italic">${escapeHtml(msg)}</td></tr>`;
+        }
+    });
+
+    document.getElementById('exportBtn').addEventListener('click', () =>
+        exportCSV(tableData, document.getElementById('courseId').value.trim())
+    );
+</script>
+</body>
+</html>
