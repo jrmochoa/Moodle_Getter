@@ -77,7 +77,21 @@ http.createServer((req, res) => {
         return;
     }
 
-    // Serve index.html for all other paths
+    // Serve static files (output.css, app.js) or fall back to index.html
+    const MIME = {
+        '.css': 'text/css; charset=utf-8',
+        '.js':  'application/javascript; charset=utf-8',
+    };
+    const staticPath = path.join(__dirname, parsed.pathname);
+    const ext = path.extname(staticPath);
+    if (MIME[ext] && fs.existsSync(staticPath)) {
+        fs.readFile(staticPath, (err, data) => {
+            if (err) { res.writeHead(404, CORS); res.end('Not found'); return; }
+            res.writeHead(200, { ...CORS, 'Content-Type': MIME[ext] });
+            res.end(data);
+        });
+        return;
+    }
     fs.readFile(HTML, (err, data) => {
         if (err) { res.writeHead(404); res.end('index.html not found in: ' + __dirname); return; }
         res.writeHead(200, { ...CORS, 'Content-Type': 'text/html; charset=utf-8' });

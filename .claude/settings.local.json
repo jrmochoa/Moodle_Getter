@@ -1,0 +1,15 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(python3 -c ' *)",
+      "Bash(python3)",
+      "Bash(python fix.py)",
+      "Bash(del \"c:\\\\Users\\\\ARALINKS ACE\\\\Downloads\\\\Moodle_Getter\\\\fix.py\")",
+      "Bash(git init *)",
+      "Bash(chmod +x \"c:/Users/ARALINKS ACE/Downloads/Moodle_Getter/.git/hooks/post-commit\")",
+      "Bash(git add *)",
+      "Bash(git commit *)",
+      "Bash(netstat -ano)"
+    ]
+  }
+}
