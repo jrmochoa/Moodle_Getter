@@ -1,5 +1,6 @@
 node_modules/
 backups/
+data/
 output.css
 *.log
 .DS_Store

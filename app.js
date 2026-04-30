@@ -14,6 +14,8 @@ let activeTab    = 'teachers'; // 'teachers' | 'oer'
 let sortMode     = 'oldest';   // 'oldest' | 'newest' | 'course'
 let currentCourseName = '';
 let currentCourseId   = null;
+let currentRows       = [];
+let activeStrategies  = [];
 
 const PROXY_BASE = 'http://localhost:8080';
 
@@ -49,11 +51,78 @@ const MODULE_FULLNAMES = {
 };
 const modFullName = m => MODULE_FULLNAMES[m] || (m ? m.charAt(0).toUpperCase()+m.slice(1) : 'Unknown');
 
+// ── Strategies — in-memory fallback seed ─────────────────────────────────────
+
+const STRATEGIES = [
+    {name:'assessment-assisted discussion',keywords:['assessment-assisted']},
+    {name:'collaborative learning',keywords:['collaborative']},
+    {name:'content discussion',keywords:['content discussion']},
+    {name:'drill/practice/exercise',keywords:['drill','practice','exercise']},
+    {name:'election',keywords:['election']},
+    {name:'enrichment',keywords:['enrichment']},
+    {name:'entrance exam',keywords:['entrance exam','entrance']},
+    {name:'evaluation - student',keywords:['evaluation student']},
+    {name:'evaluation - student services',keywords:['evaluation student services']},
+    {name:'evaluation - teacher',keywords:['evaluation teacher']},
+    {name:'evaluation - parents',keywords:['evaluation parents']},
+    {name:'family day',keywords:['family day']},
+    {name:'focus group discussion',keywords:['focus group','fgd']},
+    {name:'formative assessment',keywords:['formative']},
+    {name:'game',keywords:['game']},
+    {name:'interactive lecture demonstration',keywords:['interactive lecture','ild']},
+    {name:'listening activity',keywords:['listening']},
+    {name:'motivation',keywords:['motivation']},
+    {name:'peer assessment',keywords:['peer assessment','peer']},
+    {name:'performance task',keywords:['performance task','pt']},
+    {name:'Playground',keywords:['playground']},
+    {name:'post-assessment',keywords:['post-assessment','post assessment','posttest']},
+    {name:'pre-assessment',keywords:['pre-assessment','pre assessment','pretest']},
+    {name:'project presentation',keywords:['project presentation','project']},
+    {name:'quiz bee',keywords:['quiz bee']},
+    {name:'reading activity',keywords:['reading']},
+    {name:'reference material',keywords:['reference']},
+    {name:'remediation',keywords:['remediation']},
+    {name:'research',keywords:['research']},
+    {name:'reviewer',keywords:['reviewer']},
+    {name:'self-assessment',keywords:['self-assessment','self assessment']},
+    {name:'speaking activity',keywords:['speaking']},
+    {name:'sports fest',keywords:['sports fest','sports']},
+    {name:'stakeholders engagement',keywords:['stakeholders']},
+    {name:'summative assessment',keywords:['summative']},
+    {name:'synchronous discussion',keywords:['synchronous']},
+    {name:'tutorial',keywords:['tutorial']},
+    {name:'viewing activity',keywords:['viewing']},
+    {name:'lab activity',keywords:['lab']},
+    {name:'writing activity',keywords:['writing']},
+    {name:'file upload and monitoring sheet',keywords:['monitoring sheet','file upload']},
+    {name:'periodic test',keywords:['periodic test','periodic']},
+    {name:'summary of scores',keywords:['summary of scores','summary']},
+];
+
+async function loadStrategies() {
+    try {
+        const res = await fetch('/strategies');
+        if (!res.ok) throw new Error();
+        const data = await res.json();
+        activeStrategies = data.strategies;
+    } catch (_) {
+        activeStrategies = STRATEGIES;
+    }
+}
+
+function getStrategy(activityName) {
+    const name = (activityName || '').toLowerCase();
+    for (const s of activeStrategies) {
+        if (s.keywords?.some(kw => name.includes(kw.toLowerCase()))) return s.name;
+    }
+    return '';
+}
+
 function setStatus(msg, isError=false) {
     statusDiv.textContent = msg;
-    statusDiv.className = isError
-        ? 'mt-4 px-4 py-3 rounded-xl border-l-4 border-red-500 bg-red-50 text-sm text-red-700'
-        : 'mt-4 px-4 py-3 rounded-xl border-l-4 border-sky-500 bg-slate-100 text-sm text-slate-700';
+    statusDiv.style.cssText = isError
+        ? 'margin-top:12px;padding:10px 14px;border-radius:8px;background:#fef2f2;border-left:3px solid #ef4444;font-size:13px;color:#b91c1c'
+        : 'margin-top:12px;padding:10px 14px;border-radius:8px;background:#f1f5f9;border-left:3px solid #0284c7;font-size:13px;color:#475569';
 }
 
 function setProgress(current, total, label='') {
@@ -117,6 +186,14 @@ function fileExtension(mod) {
 function activityTypeLabel(modname, mod) {
     if (!modname) return 'Unknown';
     if (modname === 'resource') {
+        // mod.name priority: activity name containing "presentation" wins everything
+        if (mod?.name && /presentation/i.test(mod.name)) return 'File - Presentation';
+        // Filename priority: filename containing "presentation" wins over extension map
+        if (mod?.contents) {
+            for (const c of mod.contents) {
+                if (c.filename && /presentation/i.test(c.filename)) return 'File - Presentation';
+            }
+        }
         const ext = fileExtension(mod);
         if (ext) {
             const cat = FILE_CATS[ext];
@@ -217,7 +294,7 @@ async function fetchLogDoc(url, sessionCookie) {
         return new DOMParser().parseFromString(await res.text(), 'text/html');
     } catch(e) {
         if (e.message?.includes('Failed to fetch') || e.name === 'TypeError') {
-            document.getElementById('corsNotice').classList.remove('hidden');
+            document.getElementById('corsNotice').style.display = 'block';
         }
         return null;
     }
@@ -286,7 +363,7 @@ async function buildRows(sections, token, baseUrl, courseId, sessionCookie, fall
     const allMods = sections.flatMap(s => s.modules || []);
     const total   = allMods.length;
     let done = 0;
-    progressWrap.classList.remove('hidden');
+    progressWrap.style.display = 'block';
     setProgress(0, total, `Fetching ${total} log pages…`);
 
     const BATCH = 6;
@@ -313,6 +390,7 @@ async function buildRows(sections, token, baseUrl, courseId, sessionCookie, fall
             activityName: mod.name            || `Unnamed ${mod.modname}`,
             activityUrl:  activityViewUrl(mod, baseUrl),
             activityType: activityTypeLabel(mod.modname, mod),
+            strategy:     getStrategy(mod.name || ''),
             modname:      mod.modname         || '',
             courseIndex:  i,
             logUrl:       buildLogUrl(baseUrl, courseId, mod.id),
@@ -320,7 +398,7 @@ async function buildRows(sections, token, baseUrl, courseId, sessionCookie, fall
     });
 
     setProgress(total, total, 'Done!');
-    setTimeout(() => progressWrap.classList.add('hidden'), 1500);
+    setTimeout(() => progressWrap.style.display = 'none', 1500);
     return rows;
 }
 
@@ -345,9 +423,24 @@ function getActiveRows() {
 // ── Render ───────────────────────────────────────────────────────────────────
 
 function renderTable(rows) {
+    currentRows = rows || [];
+
+    // Inject Strategy column header once (lives in index.html thead)
+    const headerRow = document.querySelector('thead tr');
+    if (headerRow && !document.getElementById('thStrategy')) {
+        const thType = [...headerRow.querySelectorAll('th')].find(th => th.textContent.trim() === 'Activity Type');
+        if (thType) {
+            const th = document.createElement('th');
+            th.id = 'thStrategy';
+            th.style.cssText = 'padding:10px 16px;text-align:left;font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.07em;color:rgba(167,139,250,.55);white-space:nowrap';
+            th.textContent = 'Strategy';
+            thType.after(th);
+        }
+    }
+
     tbody.innerHTML = '';
     if (!rows?.length) {
-        tbody.innerHTML = '<tr><td colspan="6" class="text-center py-14 text-slate-400 italic">No activities found.</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;padding:64px 20px;color:#94a3b8;font-size:13px;font-style:italic">No activities found.</td></tr>';
         rowCountEl.textContent = '0 entries';
         return;
     }
@@ -355,47 +448,69 @@ function renderTable(rows) {
     const frag = document.createDocumentFragment();
     rows.forEach((row, idx) => {
         const tr = document.createElement('tr');
-        tr.className = 'border-b border-slate-100 hover:bg-sky-50 transition-colors';
+        tr.style.borderBottom = '1px solid #f1f5f9';
+        tr.onmouseenter = () => tr.style.background = '#f0f9ff';
+        tr.onmouseleave = () => tr.style.background = '';
 
         const tdNum = document.createElement('td');
-        tdNum.className = 'px-4 py-3 text-slate-400 text-xs font-mono';
+        tdNum.style.cssText = 'padding:10px 16px;color:#94a3b8;font-size:11px;font-family:monospace';
         tdNum.textContent = idx + 1;
 
         const tdDate = document.createElement('td');
-        tdDate.className = 'px-4 py-3 whitespace-nowrap';
+        tdDate.style.cssText = 'padding:10px 16px;white-space:nowrap';
         const badge = row.fromLog
-            ? `<span class="ml-1.5 text-[10px] font-bold bg-emerald-100 text-emerald-700 border border-emerald-200 px-1.5 py-0.5 rounded-full">LOG</span>`
-            : `<span class="ml-1.5 text-[10px] font-bold bg-amber-100 text-amber-700 border border-amber-200 px-1.5 py-0.5 rounded-full" title="Could not read log page — using mod.added">EST</span>`;
-        tdDate.innerHTML = `<span class="font-mono text-xs bg-slate-100 text-slate-700 px-2.5 py-1 rounded-lg font-semibold">${escapeHtml(row.date)}</span>${badge}`;
+            ? `<span style="margin-left:6px;font-size:10px;font-weight:700;background:#d1fae5;color:#059669;border:1px solid #a7f3d0;padding:1px 6px;border-radius:99px">LOG</span>`
+            : `<span style="margin-left:6px;font-size:10px;font-weight:700;background:#fef3c7;color:#d97706;border:1px solid #fde68a;padding:1px 6px;border-radius:99px" title="Could not read log page — using mod.added">EST</span>`;
+        tdDate.innerHTML = `<span style="font-family:monospace;font-size:12px;background:#f1f5f9;color:#334155;padding:3px 10px;border-radius:6px;font-weight:600">${escapeHtml(row.date)}</span>${badge}`;
 
         const tdUser = document.createElement('td');
-        tdUser.className = 'px-4 py-3';
+        tdUser.style.cssText = 'padding:10px 16px';
         tdUser.innerHTML = row.profileUrl
-            ? `<a href="${escapeHtml(row.profileUrl)}" target="_blank" rel="noopener" class="text-sky-700 font-semibold hover:text-sky-900 hover:underline">${escapeHtml(row.fullname)}</a>`
-            : `<span class="text-slate-600">${escapeHtml(row.fullname)}</span>`;
+            ? `<a href="${escapeHtml(row.profileUrl)}" target="_blank" rel="noopener" style="color:#0369a1;font-weight:600;text-decoration:none" onmouseover="this.style.textDecoration='underline'" onmouseout="this.style.textDecoration='none'">${escapeHtml(row.fullname)}</a>`
+            : `<span style="color:#475569">${escapeHtml(row.fullname)}</span>`;
 
         const tdName = document.createElement('td');
-        tdName.className = 'px-4 py-3';
+        tdName.style.cssText = 'padding:10px 16px';
         tdName.innerHTML = row.activityUrl
-            ? `<a href="${escapeHtml(row.activityUrl)}" target="_blank" rel="noopener" class="text-violet-700 font-semibold hover:text-violet-900 hover:underline">${escapeHtml(row.activityName)}</a>`
-            : `<span class="text-slate-700 font-medium">${escapeHtml(row.activityName)}</span>`;
+            ? `<a href="${escapeHtml(row.activityUrl)}" target="_blank" rel="noopener" style="color:#7c3aed;font-weight:600;text-decoration:none" onmouseover="this.style.textDecoration='underline'" onmouseout="this.style.textDecoration='none'">${escapeHtml(row.activityName)}</a>`
+            : `<span style="color:#334155;font-weight:500">${escapeHtml(row.activityName)}</span>`;
 
         const tdType = document.createElement('td');
-        tdType.className = 'px-4 py-3';
-        tdType.innerHTML = `<span class="text-xs font-semibold bg-sky-50 text-sky-800 border border-sky-200 px-3 py-1 rounded-full">${escapeHtml(row.activityType)}</span>`;
+        tdType.style.cssText = 'padding:10px 16px';
+        tdType.innerHTML = `<span style="font-size:11px;font-weight:600;background:#f0f9ff;color:#0369a1;border:1px solid #bae6fd;padding:2px 10px;border-radius:99px">${escapeHtml(row.activityType)}</span>`;
+
+        const tdStrategy = document.createElement('td');
+        tdStrategy.style.cssText = 'padding:6px 16px';
+        const sel = document.createElement('select');
+        sel.className = 'strategy-sel';
+        const blankOpt = document.createElement('option');
+        blankOpt.value = '';
+        blankOpt.textContent = '—';
+        sel.appendChild(blankOpt);
+        for (const s of activeStrategies) {
+            const opt = document.createElement('option');
+            opt.value = s.name;
+            opt.textContent = s.name;
+            if (s.name === row.strategy) opt.selected = true;
+            sel.appendChild(opt);
+        }
+        sel.addEventListener('change', () => {
+            const target = tableData.find(r => r.courseIndex === row.courseIndex);
+            if (target) target.strategy = sel.value;
+        });
+        tdStrategy.appendChild(sel);
 
         const tdLog = document.createElement('td');
-        tdLog.className = 'px-4 py-3 text-center';
-        tdLog.innerHTML = `<a href="${escapeHtml(row.logUrl)}" target="_blank" rel="noopener"
-            class="inline-flex items-center gap-1.5 px-3 py-1.5 bg-slate-700 hover:bg-sky-700 text-white text-xs font-bold rounded-full transition-colors whitespace-nowrap">
-            <svg xmlns="http://www.w3.org/2000/svg" class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+        tdLog.style.cssText = 'padding:10px 16px;text-align:center';
+        tdLog.innerHTML = `<a href="${escapeHtml(row.logUrl)}" target="_blank" rel="noopener" class="log-btn">
+            <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
                 <path stroke-linecap="round" stroke-linejoin="round"
                     d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/>
             </svg>
             View Logs
         </a>`;
 
-        tr.append(tdNum, tdDate, tdUser, tdName, tdType, tdLog);
+        tr.append(tdNum, tdDate, tdUser, tdName, tdType, tdStrategy, tdLog);
         frag.appendChild(tr);
     });
     tbody.appendChild(frag);
@@ -410,27 +525,28 @@ function updateTabUI() {
     const cTeachers = document.getElementById('countTeachers');
     const cOer      = document.getElementById('countOer');
 
-    const BASE = 'flex items-center gap-2 px-6 py-3 text-sm font-semibold';
-
     if (activeTab === 'teachers') {
-        tTeachers.className = `${BASE} text-sky-700`;
+        tTeachers.style.color = '#0284c7';
         tTeachers.style.borderBottom = '2px solid #0284c7';
-        cTeachers.className = 'bg-sky-100 text-sky-700 text-xs px-2 py-0.5 rounded-full font-bold';
+        cTeachers.style.background = '#e0f2fe';
+        cTeachers.style.color = '#0369a1';
 
-        tOer.className = `${BASE} text-slate-400`;
+        tOer.style.color = '#94a3b8';
         tOer.style.borderBottom = '2px solid transparent';
-        cOer.className = 'bg-slate-100 text-slate-400 text-xs px-2 py-0.5 rounded-full font-bold';
+        cOer.style.background = '#f1f5f9';
+        cOer.style.color = '#94a3b8';
     } else {
-        tOer.className = `${BASE} text-sky-700`;
+        tOer.style.color = '#0284c7';
         tOer.style.borderBottom = '2px solid #0284c7';
-        cOer.className = 'bg-sky-100 text-sky-700 text-xs px-2 py-0.5 rounded-full font-bold';
+        cOer.style.background = '#e0f2fe';
+        cOer.style.color = '#0369a1';
 
-        tTeachers.className = `${BASE} text-slate-400`;
+        tTeachers.style.color = '#94a3b8';
         tTeachers.style.borderBottom = '2px solid transparent';
-        cTeachers.className = 'bg-slate-100 text-slate-400 text-xs px-2 py-0.5 rounded-full font-bold';
+        cTeachers.style.background = '#f1f5f9';
+        cTeachers.style.color = '#94a3b8';
     }
 
-    // download button reflects the active tab's data availability
     const activeData = activeTab === 'teachers' ? teacherData : oerData;
     setDownloadDisabled(downloadBtn, activeData.length === 0);
 }
@@ -475,18 +591,19 @@ function updateTabCounts() {
 
 function coursePrefix(name) {
     const m = (name || '').match(/^(\d+)\s*-\s*/);
-    return m ? `${m[1]} - ` : '';
+    return m ? `${m[1]}: ` : '';
 }
 
 function exportCSV(rows, filename, label = '') {
     if (!rows.length) { setStatus('Nothing to export.', true); return; }
     const prefix = coursePrefix(currentCourseName);
-    const hdr  = ['Date', 'Created By', 'Activity Name', 'Activity Type'];
+    const hdr  = ['Date', 'Created By', 'Activity Name', 'Activity Type', 'Strategy'];
     const body = rows.map(r => [
         r.date,
         r.fullname,
         prefix + r.activityName,
         r.activityType,
+        r.strategy || '',
     ]);
     const csv = [hdr, ...body].map(r => r.map(c => `"${String(c).replace(/"/g, '""')}"`).join(',')).join('\n');
     const blob = new Blob(['﻿' + csv], {type: 'text/csv;charset=utf-8;'});
@@ -534,24 +651,51 @@ downloadBtn.addEventListener('click', () => {
 
 // ── Main ─────────────────────────────────────────────────────────────────────
 
+window.addEventListener('strategies-updated', async () => {
+    await loadStrategies();
+    if (tableData.length > 0) {
+        tableData.forEach(r => { r.strategy = getStrategy(r.activityName); });
+        renderTable(currentRows);
+    }
+});
+
+document.addEventListener('DOMContentLoaded', async () => {
+    await loadStrategies();
+});
+
 document.getElementById('fetchBtn').addEventListener('click', async () => {
-    const rawUrl        = document.getElementById('moodleUrl').value.trim();
+    const courseUrlRaw  = document.getElementById('courseUrl').value.trim();
     const token         = document.getElementById('wsToken').value.trim();
-    const courseId      = parseInt(document.getElementById('courseId').value.trim(), 10);
     const sessionCookie = document.getElementById('sessionKey').value.trim();
 
-    if (!rawUrl)                          { setStatus('Please enter your Moodle site URL.', true); return; }
-    if (!token)                           { setStatus('Web service token is required.', true); return; }
-    if (isNaN(courseId) || courseId <= 0) { setStatus('Please enter a valid numeric Course ID.', true); return; }
+    if (!courseUrlRaw) { setStatus('Please enter the Moodle course URL.', true); return; }
+    if (!token)        { setStatus('Web service token is required.', true); return; }
 
-    const baseUrl = rawUrl.endsWith('/') ? rawUrl.slice(0, -1) : rawUrl;
+    await loadStrategies();
+
+    let baseUrl, courseId;
+    try {
+        const parsed      = new URL(courseUrlRaw);
+        const courseIdx   = parsed.pathname.indexOf('/course/');
+        const basePath    = courseIdx > 0 ? parsed.pathname.slice(0, courseIdx) : '';
+        baseUrl  = parsed.origin + basePath;
+        courseId = parseInt(parsed.searchParams.get('id'), 10);
+    } catch (_) {
+        setStatus('Invalid URL — paste the full course URL, e.g. https://yourmoodle.edu/course/view.php?id=2', true);
+        return;
+    }
+    if (isNaN(courseId) || courseId <= 0) {
+        setStatus('Course ID not found in URL — make sure it contains ?id=…', true);
+        return;
+    }
+
     currentCourseId = courseId;
 
-    document.getElementById('corsNotice').classList.add('hidden');
-    tbody.innerHTML = '<tr><td colspan="6" class="text-center py-14 text-slate-400 italic">Loading…</td></tr>';
+    document.getElementById('corsNotice').style.display = 'none';
+    tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;padding:64px 20px;color:#94a3b8;font-size:13px;font-style:italic">Loading…</td></tr>';
     rowCountEl.textContent = 'loading…';
     setDownloadDisabled(downloadBtn, true);
-    document.getElementById('courseNameSection').classList.add('hidden');
+    document.getElementById('courseNameSection').style.display = 'none';
     tableData   = [];
     teacherData = [];
     oerData     = [];
@@ -568,7 +712,7 @@ document.getElementById('fetchBtn').addEventListener('click', async () => {
         const nameEl = document.getElementById('courseNameDisplay');
         nameEl.textContent = courseName || `Course ID: ${courseId}`;
         nameEl.href = `${baseUrl}/course/view.php?id=${courseId}`;
-        document.getElementById('courseNameSection').classList.remove('hidden');
+        document.getElementById('courseNameSection').style.display = 'block';
 
         const total = sections.reduce((n, s) => n + (s.modules?.length || 0), 0);
         setStatus(`Found ${total} module(s). Reading log pages…`);
@@ -590,6 +734,6 @@ document.getElementById('fetchBtn').addEventListener('click', async () => {
         if (msg.includes('Invalid token') || msg.includes('Access control')) msg = 'Invalid token or insufficient permissions.';
         else if (msg.includes('Course not found')) msg = `Course ID ${courseId} not found.`;
         setStatus(msg, true);
-        tbody.innerHTML = `<tr><td colspan="6" class="text-center py-14 text-red-500 italic">${escapeHtml(msg)}</td></tr>`;
+        tbody.innerHTML = `<tr><td colspan="7" style="text-align:center;padding:64px 20px;color:#ef4444;font-size:13px;font-style:italic">${escapeHtml(msg)}</td></tr>`;
     }
 });
