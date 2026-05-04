@@ -9,24 +9,38 @@ const CORS = {
 };
 
 module.exports = function handler(req, res) {
-    Object.entries(CORS).forEach(([k, v]) => res.setHeader(k, v));
-
-    if (req.method === 'OPTIONS') { res.status(204).end(); return; }
+    if (req.method === 'OPTIONS') {
+        res.writeHead(204, CORS);
+        res.end();
+        return;
+    }
 
     const { url: target, accept, cookie } = req.query;
-    if (!target) { res.status(400).json({ error: 'url required' }); return; }
+    if (!target) {
+        res.writeHead(400, { ...CORS, 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ error: 'url required' }));
+        return;
+    }
 
     let parsed;
     try { parsed = url.parse(target); }
-    catch { res.status(400).json({ error: 'Bad URL' }); return; }
+    catch {
+        res.writeHead(400, { ...CORS, 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ error: 'Bad URL' }));
+        return;
+    }
 
     const proto = parsed.protocol === 'https:' ? https : http;
     const reqHeaders = {
         'Accept':     accept || 'application/json',
-        'User-Agent': 'Mozilla/5.0 MoodleReportProxy/1.0',
+        'User-Agent': 'Mozilla/5.0',
     };
     if (cookie) reqHeaders['Cookie'] = cookie.startsWith('MoodleSession=')
         ? cookie : `MoodleSession=${cookie}`;
+
+    // Forward client IP so Moodle's reverse-proxy-aware session check passes
+    const clientIp = req.headers['x-forwarded-for'] || req.headers['x-real-ip'];
+    if (clientIp) reqHeaders['X-Forwarded-For'] = clientIp.split(',')[0].trim();
 
     const options = {
         hostname: parsed.hostname,
@@ -36,12 +50,21 @@ module.exports = function handler(req, res) {
         headers:  reqHeaders,
     };
 
-    const upstream = proto.request(options, upRes => {
+    const upReq = proto.request(options, upRes => {
         const ct = upRes.headers['content-type'] || 'application/octet-stream';
-        res.setHeader('Content-Type', ct);
-        res.status(upRes.statusCode);
-        upRes.pipe(res);
+        const chunks = [];
+        upRes.on('data', chunk => chunks.push(chunk));
+        upRes.on('end', () => {
+            const body = Buffer.concat(chunks);
+            res.writeHead(upRes.statusCode, { ...CORS, 'Content-Type': ct });
+            res.end(body);
+        });
     });
-    upstream.on('error', err => res.status(502).json({ error: err.message }));
-    upstream.end();
+    upReq.on('error', err => {
+        if (!res.headersSent) {
+            res.writeHead(502, { ...CORS, 'Content-Type': 'application/json' });
+            res.end(JSON.stringify({ error: err.message }));
+        }
+    });
+    upReq.end();
 };
