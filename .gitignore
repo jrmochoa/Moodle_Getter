@@ -1,7 +1,3 @@
 node_modules/
-backups/
-data/
-output.css
+.vercel/
 *.log
-.DS_Store
-Thumbs.db

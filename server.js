@@ -16,6 +16,7 @@ const url   = require('url');
 const PORT = 8080;
 const HTML = path.join(__dirname, 'index.html');
 const STRATEGIES_FILE = path.join(__dirname, 'data', 'strategies.json');
+const SUBJECTS_FILE   = path.join(__dirname, 'data', 'subjects.json');
 
 const DEFAULT_STRATEGIES = [
     { "name": "assessment-assisted discussion", "keywords": ["assessment-assisted"], "isDefault": true },
@@ -63,10 +64,25 @@ const DEFAULT_STRATEGIES = [
     { "name": "summary of scores",              "keywords": ["summary of scores", "summary"], "isDefault": true }
 ];
 
-// Ensure data/ dir and seed file exist on startup
+const DEFAULT_SUBJECTS = [
+    { "name": "Christian Living and Values Education", "keywords": ["Christian Living", "Values Education", "CLE"], "isDefault": true },
+    { "name": "Computer",      "keywords": ["Computer", "ICT", "Programming"],                "isDefault": true },
+    { "name": "English",       "keywords": ["English", "Reading"],                            "isDefault": true },
+    { "name": "Filipino",      "keywords": ["Filipino", "Tagalog"],                           "isDefault": true },
+    { "name": "MAPEH",         "keywords": ["MAPEH", "Music", "Arts", "PE", "Health"],        "isDefault": true },
+    { "name": "Mathematics",   "keywords": ["Math", "Mathematics", "Algebra", "Geometry"],    "isDefault": true },
+    { "name": "Science",       "keywords": ["Science", "Physics", "Chemistry", "Biology"],    "isDefault": true },
+    { "name": "Social Studies","keywords": ["Social Studies", "History", "Geography"],         "isDefault": true },
+    { "name": "TLE",           "keywords": ["TLE", "Technology", "Livelihood"],               "isDefault": true }
+];
+
+// Ensure data/ dir and seed files exist on startup
 fs.mkdirSync(path.join(__dirname, 'data'), { recursive: true });
 if (!fs.existsSync(STRATEGIES_FILE)) {
     fs.writeFileSync(STRATEGIES_FILE, JSON.stringify(DEFAULT_STRATEGIES, null, 2), 'utf8');
+}
+if (!fs.existsSync(SUBJECTS_FILE)) {
+    fs.writeFileSync(SUBJECTS_FILE, JSON.stringify(DEFAULT_SUBJECTS, null, 2), 'utf8');
 }
 
 const CORS = {
@@ -129,6 +145,46 @@ http.createServer((req, res) => {
         return;
     }
 
+    // GET /subjects
+    if (req.method === 'GET' && parsed.pathname === '/subjects') {
+        try {
+            const data = JSON.parse(fs.readFileSync(SUBJECTS_FILE, 'utf8'));
+            res.writeHead(200, { ...CORS, 'Content-Type': 'application/json' });
+            res.end(JSON.stringify({ subjects: data }));
+        } catch {
+            res.writeHead(500, { ...CORS, 'Content-Type': 'application/json' });
+            res.end(JSON.stringify({ error: 'Failed to read subjects' }));
+        }
+        return;
+    }
+
+    // POST /subjects
+    if (req.method === 'POST' && parsed.pathname === '/subjects') {
+        let body = '';
+        req.on('data', chunk => { body += chunk; });
+        req.on('end', () => {
+            try {
+                const payload = JSON.parse(body);
+                if (!payload || !Array.isArray(payload.subjects) || payload.subjects.length === 0) {
+                    res.writeHead(400, { ...CORS, 'Content-Type': 'application/json' });
+                    res.end(JSON.stringify({ error: 'Invalid payload' }));
+                    return;
+                }
+                fs.writeFileSync(SUBJECTS_FILE, JSON.stringify(payload.subjects, null, 2), 'utf8');
+                res.writeHead(200, { ...CORS, 'Content-Type': 'application/json' });
+                res.end(JSON.stringify({ ok: true }));
+            } catch {
+                res.writeHead(500, { ...CORS, 'Content-Type': 'application/json' });
+                res.end(JSON.stringify({ error: 'Failed to save subjects' }));
+            }
+        });
+        req.on('error', () => {
+            res.writeHead(500, { ...CORS, 'Content-Type': 'application/json' });
+            res.end(JSON.stringify({ error: 'Failed to save subjects' }));
+        });
+        return;
+    }
+
     // POST /strategies — persist updated strategies list
     if (req.method === 'POST' && parsed.pathname === '/strategies') {
         let body = '';
@@ -170,10 +226,11 @@ http.createServer((req, res) => {
         return;
     }
 
-    // Serve static files (output.css, app.js) or fall back to index.html
+    // Serve static files (output.css, app.js, src/icons/*.svg) or fall back to index.html
     const MIME = {
         '.css': 'text/css; charset=utf-8',
         '.js':  'application/javascript; charset=utf-8',
+        '.svg': 'image/svg+xml; charset=utf-8',
     };
     const staticPath = path.join(__dirname, parsed.pathname);
     const ext = path.extname(staticPath);

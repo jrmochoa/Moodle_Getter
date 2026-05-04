@@ -1,14 +1,26 @@
 # Moodle Activity Report — CLAUDE.md
 
-## What This Project Is
+## Role
 
-A single-page browser tool that generates an activity creation report for a Moodle course. Given a Moodle site URL, a web-service token, a course ID, and a session cookie, it:
+Senior Vanilla JS / Browser-App Engineer. ES2022, no new frameworks or npm packages. Production standards: no dead code, no speculative abstractions, minimal comments.
 
-1. Fetches all course modules via the Moodle REST API.
-2. For each module, scrapes the Moodle log report page to find the real **creation date** and **creator name** (the "Course module created" event).
-3. Presents results in a tabbed, sortable table with CSV export.
+---
 
-There is **no back-end processing of Moodle data**. All fetching and parsing happens entirely in the browser. The only server-side component is a thin local CORS proxy that lets the browser reach a remote Moodle instance from `localhost`.
+## Stack
+
+- **Alpine.js v3** (CDN `@3.x.x`) — root component on `<body x-data="credentialsApp()">`
+- **Tailwind CSS v4.2.x** — compiled via `@tailwindcss/cli` from `src/input.css` → `output.css`
+- **Node.js CORS proxy** — `server.js` (preferred); `server.py` fallback (no CSS/JS serving)
+
+---
+
+## IMPORTANT: npm Commands
+
+```
+npm start          # node server.js — CORS proxy on localhost:8080
+npm run build      # compile src/input.css → output.css (minified) — run after ANY new Tailwind class
+npm run watch      # same, with file watcher
+```
 
 ---
 
@@ -16,288 +28,196 @@ There is **no back-end processing of Moodle data**. All fetching and parsing hap
 
 ```
 Browser (index.html + app.js)
-        │
-        │  fetch() via proxy when running locally
-        ▼
-Local CORS Proxy (server.js or server.py)  ← port 8080
-        │
-        │  plain HTTP GET with forwarded Cookie header
-        ▼
+    │  fetch() — routed through proxy when isLocal() === true
+    ▼
+Local CORS Proxy (server.js) → port 8080
+    │
+    ▼
 Remote Moodle Instance
-  ├─ /webservice/rest/server.php   (JSON Web Services API)
-  └─ /report/log/index.php         (HTML log pages — scraped)
+  ├─ /webservice/rest/server.php        ← JSON Web Services (token auth)
+  ├─ /course/view.php?id={id}           ← sesskey extraction (cookie auth)
+  └─ /report/log/index.php?...&download=json  ← JSON log (cookie auth)
 ```
 
-When the app is deployed **on the same domain as Moodle**, the proxy is not needed — `isLocal()` returns `false` and all fetches go directly to Moodle. When running from `localhost` or `file://`, every request is routed through the proxy so the browser's same-origin policy is not violated.
+**IMPORTANT:** All fetching and parsing happens entirely in the browser. `server.js` is a dumb TCP tunnel — it forwards requests and streams responses unchanged.
+
+**Proxy routing (never bypass):**
+- Web service calls → `apiProxyUrl(url)` — no cookie
+- Log/page calls → `htmlProxyUrl(url, cookie)` — cookie forwarded
+- `isLocal()` returns `true` when origin is `localhost` or `file://`
+
+**IMPORTANT — subdirectory installs** (e.g. `/cle`): base URL extracted via `indexOf('/course/')` — **never `new URL(...).origin`**, which strips the subpath.
 
 ---
 
-## File Structure
+## File Map
 
 | File | Purpose |
 |---|---|
-| `index.html` | Full UI — credentials form, progress bar, tab bar, results table |
-| `app.js` | All client-side logic — API calls, log scraping, sorting, rendering, CSV export |
-| `server.js` | Node.js CORS proxy (zero npm dependencies, uses built-in `http`/`https`) |
-| `server.py` | Python CORS proxy (zero pip dependencies, uses `http.server` + `urllib`) |
-| `start.bat` | Windows launcher — tries Node.js, then Python, then Python 3 |
-| `src/input.css` | Tailwind CSS entry point (`@import "tailwindcss"`) |
-| `output.css` | **Compiled** Tailwind CSS — loaded by `index.html`, must be built before use |
-| `package.json` | npm scripts for Tailwind build only; `server.js` has no runtime npm deps |
+| `index.html` | Full UI — Alpine app shell, modals, progress bar, tab bar, results table |
+| `app.js` | All client logic — API calls, sorting, rendering, CSV export |
+| `server.js` | Node CORS proxy — **preferred**; serves all static files |
+| `server.py` | Python CORS proxy — fallback; **does not** serve `output.css` or `app.js` |
+| `src/input.css` | Tailwind v4 entry: `@import "tailwindcss"` only |
+| `output.css` | Compiled Tailwind CSS — **must be rebuilt** after adding any utility class |
+| `strategies.json` | Keyword→strategy map — read fresh on every `/strategies` request |
 
 ---
 
-## Running Locally
+## Data Flow
 
-### Prerequisites
+1. `fetchBtn` click → extract `baseUrl` via `indexOf('/course/')` (preserves subdirectory path)
+2. Three parallel WS calls: `core_course_get_courses`, `core_course_get_contents`, `core_enrol_get_enrolled_users`
+3. `fetchSesskey()` scrapes `/"sesskey":"([a-zA-Z0-9]+)"/` from `/course/view.php?id={id}`
+4. `scrapeLogPage()` per module (BATCH=6 concurrent):
+   - **Step 1** — `modaction=c` fetch → `eventname === 'Course module created'` found → **VERIFIED**
+   - **Step 2** — broad fetch (no modaction), only if Step 1 empty → oldest event → **INFERRED**
+   - **Step 3** — `mod.added` fallback when both empty → **ESTIMATED**
+5. Log endpoint returns `[[{...}]]` (double-wrapped) — unwrap: `Array.isArray(parsed[0]) ? parsed[0] : parsed`
+6. `parseMoodleJsonTs()` converts `DD/MM/YY, HH:MM:SS` → Unix seconds with full precision (needed for INFERRED sort)
 
-- **Node.js** (v18+) or **Python 3** — to run the CORS proxy
-- **Node.js + npm** — to build the CSS (Tailwind CLI)
+**Tab split:** `teacherData` = `modname !== 'url'`; `oerData` = `modname === 'url'`; `allData` = all rows. ALL tab is default.
 
-### First-time setup
+**Course separator rows** — shown in unsorted view only (`sortCol === null`); always rendered for every course in `courseRegistry`, even if the course has zero rows after filtering or zero modules — in that case a "No data." empty-state row (`.course-empty-cell`) follows the separator. Each separator carries a `.course-sep-heatmap-btn` (`book-open-check.svg`) that opens the heatmap modal pre-selected to that course.
 
-```bash
-npm install          # installs @tailwindcss/cli and tailwindcss
-npm run build        # compiles src/input.css → output.css
-```
+**Date Confidence:**
 
-### Start the proxy + open the app
-
-**Windows (double-click or run):**
-```
-start.bat
-```
-This tries Node.js first, then falls back to Python. It also opens `http://localhost:8080` in the default browser automatically.
-
-**Manual Node.js:**
-```bash
-npm start            # or: node server.js
-# then open: http://localhost:8080
-```
-
-**Manual Python:**
-```bash
-python server.py     # or: python3 server.py
-# then open: http://localhost:8080
-```
-
-### During CSS development
-
-```bash
-npm run watch        # rebuilds output.css on every change to src/input.css or index.html
-```
+| Priority | `dateSource` | Badge | Condition |
+|---|---|---|---|
+| 1 | `VERIFIED` | LOG (green) | `Course module created` event found in Step 1 |
+| 2 | `INFERRED` | FIRST (orange) | Oldest event from Step 2 broad fetch |
+| 3 | `ESTIMATED` | EST (yellow) | Both fetches empty; `mod.added` used |
 
 ---
 
-## npm Scripts
+## Column Filters
 
-| Script | Command | What it does |
-|---|---|---|
-| `start` | `node server.js` | Starts the local CORS proxy |
-| `build` | `tailwindcss -i src/input.css -o output.css --minify` | One-shot CSS build |
-| `watch` | `tailwindcss -i src/input.css -o output.css --watch` | CSS hot-rebuild |
+- **Type filter** — `hiddenTypes` Set; `toggleFilterDropdown`; icon `#typeFilterIcon`
+- **Date filter** — `hiddenYears` + `hiddenMonths` Sets; `toggleDateFilterDropdown`; icon `#dateFilterIcon`
+- Filter order in `applyAndRender()`: sort → type → date (AND logic)
+- Both cleared on every new fetch and by `resetTable()`; CSV export mirrors same logic
+- Dropdown scans `getActiveRows()` so already-hidden values stay accessible
 
 ---
 
-## Credentials Required (UI Inputs)
+## Activity Heatmap Modal
 
-| Field | Where to get it |
+- **Trigger** — `#heatmapBtn` in the toolbar (calendar icon); disabled until a fetch succeeds; enabled via `setDownloadDisabled(heatmapBtn, false)` after fetch; also triggered by clicking the `book-open-check.svg` icon on any course separator row (auto-selects that course)
+- **Data source** — course list built from `tableData` (all courses, including those with 0 filtered rows); row data per course comes from `currentRows` (respects active tab + type + date filters)
+- **State variables** — `heatmapCourses[]` (`{courseName, rows}`), `heatmapCourseIdx` (current index)
+- **Functions** — `openHeatmapModal(targetGroupIndex = null)`, `closeHeatmapModal()`, `renderHeatmapForCourse(idx)`, `buildHeatmapYearSection(year, dayCountMap)`, `updateHeatmapNav()`
+- **Constant** — `MONTH_SHORT` (3-letter month abbreviations, used for grid month labels)
+- **Grid layout** — GitHub-style: 7 rows (Mon → Sun), week columns left→right, `grid-auto-flow: column`; each cell is 13 × 13 px with 2 px gap; cells outside the year are `.hm-empty` (transparent)
+- **Day-count map** — keyed `'YYYY-MM-DD'` from `row.rawTs * 1000`; 5 intensity levels (0 = `.hm-level-0` … 11+ = `.hm-level-4`); future dates → `.hm-future`; tooltip: `"N module(s) on D Month YYYY"`
+- **Year sections** — one per calendar year with data, newest on top; month labels below the grid, widths computed as `weekSpan × 15 px`
+- **Navigation** — dropdown `#heatmapCourseSelect` lists all courses; `#heatmapPrevBtn` / `#heatmapNextBtn` at bottom show adjacent course names (hidden when at boundary)
+- **Dismiss** — close button (`#heatmapCloseBtn`) or click on backdrop
+
+---
+
+## Icons
+
+All icons: `src/icons/*.svg` (Lucide-style, `stroke="currentColor"`). Always use `<img class="icon-img" alt="">`.
+
+**IMPORTANT: Never use inline SVGs or emojis — always reference files from `src/icons/`.**
+
+| File | Usage |
 |---|---|
-| **Moodle Site URL** | Base URL, e.g. `https://yourmoodle.edu` |
-| **Web Service Token** | Moodle admin → Site admin → Plugins → Web services → Manage tokens. Must belong to the `moodle_mobile_app` service. |
-| **Course ID** | The numeric `id` in the course URL: `/course/view.php?id=2` |
-| **Session Cookie** | Browser DevTools → Application → Cookies → `MoodleSession` value. **Must be from an active admin session.** Expires on logout. |
+| `settings.svg` | Credentials button + modal header |
+| `logs.svg` | Manage Strategies button + modal header |
+| `notebook.svg` | Manage Subjects button + modal header |
+| `moon.svg` / `sun.svg` | Dark/light mode toggle |
+| `download.svg` | CSV Download button |
+| `list-reset.svg` | Reset to Default View button |
+| `calendars.svg` | Activity Heatmap button |
+| `external-link.svg` | Logs column header + row log link |
+| `x.svg` | All modal close buttons |
+| `chevron-left.svg` | Heatmap prev-course nav button |
+| `chevron-right.svg` | Heatmap next-course nav button |
+| `book-open-check.svg` | Course separator row heatmap trigger button |
+| `eye.svg` | Reveal toggle — show masked credential field |
+| `eye-off.svg` | Reveal toggle — hide revealed credential field |
 
-> The session cookie is required because Moodle does not expose log data via web services. The tool reads log HTML pages directly, which requires an authenticated session.
-
-The HTML file currently has credentials hard-coded in the `value` attributes of the inputs (`index.html` lines 30, 37, 45, 55). These are dev defaults — change or clear them before sharing.
-
----
-
-## Data Flow in Detail
-
-### 1. Trigger (`fetchBtn` click)
-
-Three requests fire in parallel:
-
-| Request | API / Endpoint | Purpose |
-|---|---|---|
-| `core_course_get_courses` | Web services | Resolve course `fullname` |
-| `core_course_get_contents` | Web services | All sections + modules |
-| `core_enrol_get_enrolled_users` | Web services | Fallback creator (earliest `firstaccess`) |
-
-### 2. Log page scraping (`buildRows`)
-
-For every module returned by `core_course_get_contents`, the tool fetches:
-
-```
-/report/log/index.php?chooselog=1&id={courseId}&modid={cmid}&modaction=c&logreader=logstore_standard
-```
-
-It parses the first "Course module created" row it finds, extracting:
-- **Date** — cell 0, parsed via `parseMoodleDate()` (handles ISO strings and `DD Month YYYY` formats)
-- **Creator** — first `<a href*="/user/">` link in columns 0–3
-
-If the event is on a later page (paginated logs), it also fetches the last page. Scraping runs in **batches of 6 concurrent requests** (`BATCH = 6` in `buildRows`).
-
-### 3. Row object
-
-Each module becomes a row object:
-
-```js
-{
-  date,         // MM/DD/YYYY string — from log page, or formatDate(mod.added)
-  rawTs,        // Unix timestamp — parseDateStrToTs(log date) || mod.added || mod.timecreated
-  fromLog,      // boolean — true if date+creator came from log scrape
-  fullname,     // creator name — from log, fallbackUser, or 'Unknown'
-  profileUrl,   // Moodle profile link or null
-  activityName, // mod.name
-  activityUrl,  // /mod/{modname}/view.php?id={cmid}
-  activityType, // human-readable label from MODULE_FULLNAMES or activityTypeLabel()
-  modname,      // raw Moodle modname ('assign', 'url', 'resource', …)
-  courseIndex,  // original position in the flattened module list
-  logUrl,       // link to the log page for this module
-}
-```
-
-### 4. Tabs
-
-`tableData` is split once after `buildRows` completes:
-
-- **Teachers Creation** tab: `tableData.filter(r => r.modname !== 'url')`
-- **OER** tab: `tableData.filter(r => r.modname === 'url')` — URL-type activities only
-
-### 5. Sort (`applySort`)
-
-`rawTs` drives all sorting. It is set to the highest-confidence timestamp available (log-parsed date first, then `mod.added`, then `mod.timecreated`). This ensures the sort order matches the displayed date column.
-
-| Mode | Logic |
-|---|---|
-| Oldest First (default) | `a.rawTs - b.rawTs`, ties broken by `parseDateStrToTs(date)` |
-| Newest First | `b.rawTs - a.rawTs`, same tie-break reversed |
-| Course Order | original `courseIndex` from `core_course_get_contents` |
-
-### 6. Date confidence badges
-
-Every row in the table shows a small badge:
-- **LOG** (green) — date and creator were read from the actual log page
-- **EST** (amber) — log page was unavailable; date comes from `mod.added` or `mod.timecreated`
+Tinting: `.icon-img` CSS filter in `index.html <style>` block (dark default) + `body.light-mode .icon-img` override.
+Muted icons: add `style="opacity:0.55"` inline (single-property — acceptable).
 
 ---
 
-## Activity Type Labels
+## NEVER DO
 
-`activityTypeLabel()` maps Moodle `modname` to a human-readable string. For `resource` modules it also inspects `mod.contents[].filename` to append a file category (`File - Documents`, `File - Video`, etc.).
-
-The full map is in `MODULE_FULLNAMES` (`app.js` lines 38–49) — 30 entries. Unknown modnames fall back to title-case of the raw string.
-
----
-
-## CSV Export
-
-`downloadBtn` is context-aware — it always exports the **currently active tab's** data in the current sort order.
-
-Columns exported: `Date`, `Created By`, `Activity Name`, `Activity Type`.
-
-If the course name matches `^(\d+)\s*-\s*` (e.g. `101 - Introduction`), the numeric prefix is prepended to every Activity Name in the CSV (`coursePrefix()`).
-
-Filename pattern:
-- Teachers tab: `moodle_course_{id}_teachers_creation.csv`
-- OER tab: `moodle_course_{id}_oer.csv`
-
-The CSV is UTF-8 with BOM (`﻿`) so Excel opens it correctly without encoding issues.
+- **NEVER** use `new URL(...).origin` for base URL extraction — strips subdirectory path
+- **NEVER** use inline SVGs or emojis for icons
+- **NEVER** write multi-property inline styles — define a named class in `src/input.css`
+- **NEVER** set Tailwind utility classes dynamically via JS (`className` / `classList`) — JIT scanner won't include them; use custom CSS modifier classes (e.g. `.tab-btn--active`) defined in the stylesheet
+- **NEVER** use Alpine `$parent` to mutate ancestor state — use `$dispatch('event')` + `@event.window="..."` on the target element
+- **NEVER** hardcode credentials in committed files
+- **NEVER** bind `server.js` to `0.0.0.0` — must stay `127.0.0.1`
+- **NEVER** add npm packages beyond existing devDependencies
+- **NEVER** use `server.py` as the primary dev server — it does not serve `output.css`
+- **NEVER** `throw` from a log/scrape helper — return `null` and let `buildRows` handle it
 
 ---
 
-## The CORS Proxy
+## Coding Standards
 
-Both proxy implementations (`server.js` / `server.py`) behave identically:
+**Naming:** `camelCase` functions, `SCREAMING_SNAKE` constants, DOM cache vars match element ID.
 
-- Listens on `127.0.0.1:8080` only (not exposed to the network)
-- `GET /proxy?url=<encoded>&cookie=<session>&accept=<mime>` — fetches the target URL, forwards the cookie, streams the response back with `Access-Control-Allow-Origin: *`
-- `GET /` and `GET /*` — serves `index.html` (and `output.css`/`app.js` for known extensions)
-- `OPTIONS` — responds 204 with CORS headers for preflight
+**Error handling:**
+- All `fetch` calls: `try/catch`, return `null` on failure — callers check for `null`
+- Long fetches: `AbortController` + `setTimeout` timeout with `clearTimeout` in `finally`
+- Fatal errors → `setStatus(msg, true)` — never `console.error` only
 
-The `start.bat` launcher prefers Node.js because it handles binary streaming more efficiently, but the Python version is functionally equivalent.
-
----
-
-## CSS / Styling
-
-- **Tailwind CSS v4** — utility-first, compiled to `output.css`
-- `src/input.css` contains only `@import "tailwindcss"` — Tailwind's JIT scanner reads class names from `index.html` and `app.js` automatically
-- **Run `npm run build` any time you add new Tailwind utility classes to `index.html`** — otherwise the class will be missing from `output.css` at runtime
-- Dynamic UI states in `app.js` (`updateTabUI`, `updateSortUI`) use **inline styles** intentionally to avoid depending on compiled Tailwind classes that may not be in `output.css`
+**IMPORTANT — CSS rules:**
+- Single-property inline styles are fine: `style="display:none"`, `style="color:#ef4444"`
+- Two or more CSS properties → define a named class in `src/input.css`; run `npm run build`
+- Theme-aware runtime values → CSS modifier class with `body.light-mode` variant (e.g. `.chip--light`)
+- `[x-cloak] { display: none }` must exist in the stylesheet
 
 ---
 
-## Key DOM IDs
+## Verification
 
-| ID | Element | Used for |
-|---|---|---|
-| `moodleUrl` | input | Moodle base URL |
-| `wsToken` | input | Web service token |
-| `courseId` | input | Course ID |
-| `sessionKey` | input | Session cookie |
-| `fetchBtn` | button | Trigger report generation |
-| `statusMessage` | div | Status / error display |
-| `progressWrap` | div | Progress bar container (hidden/shown) |
-| `progressBar` | div | Bar fill (width set via inline style) |
-| `progressPct` | span | Percentage label |
-| `progressLabel` | span | Step description |
-| `corsNotice` | div | CORS error banner (hidden/shown) |
-| `courseNameSection` | div | Course name banner (hidden/shown) |
-| `courseNameDisplay` | a | Course name link |
-| `tabTeachers` | button | Teachers Creation tab |
-| `tabOer` | button | OER tab |
-| `countTeachers` | span | Badge inside Teachers tab |
-| `countOer` | span | Badge inside OER tab |
-| `sortOldest` | button | Sort: oldest first |
-| `sortNewest` | button | Sort: newest first |
-| `sortCourse` | button | Sort: course order |
-| `downloadBtn` | button | Download CSV (context-aware) |
-| `rowCount` | span | "N entries" counter |
-| `reportTbody` | tbody | Table rows |
+After any change, confirm:
+1. `npm run build` completes without errors
+2. `grep -P 'style="[^"]*;[^"]*;' index.html app.js` returns zero results (no multi-prop inline styles)
+3. `npm start` → open `http://localhost:8080` → trigger a report fetch
+4. Table renders; badges show correct VERIFIED / INFERRED / ESTIMATED tiers
+5. Dark/light toggle, CSV download, type filter, and date filter all function correctly
+6. No CORS errors in browser DevTools Network tab
 
 ---
 
-## Known Constraints & Gotchas
+## Gotchas
 
-- **Session cookie expires** when the Moodle user logs out. Reports fail silently or return empty log pages if the session is stale.
-- **Log scraping is slow** — each module requires at least one HTTP round-trip to Moodle's log page. A course with 100 modules takes ~17 sequential batches at 6 concurrent requests each.
-- **CORS on non-local deployments** — if this file is served from a different origin than Moodle (not `localhost` and not the same domain), the browser will block log page requests. The CORS notice in the UI explains this.
-- **`server.py` does not serve static assets** — it only serves `index.html` for all non-proxy routes. `output.css` and `app.js` are **not** served by the Python proxy. Use `server.js` (or Node.js `npm start`) for local development so that `output.css` and `app.js` are served correctly.
-- **`output.css` must be built** before opening `index.html` directly from the file system — without it the page renders unstyled.
-- **Hardcoded credentials** in `index.html` input `value` attributes are dev defaults. Remove before any shared or production deployment.
+- **Session cookie expires on Moodle logout** — reports silently return no log data; user must re-paste `MoodleSession`
+- **`sesskey` is per-session CSRF token** — if `/course/view.php` fetch fails, all log downloads return empty
+- **`output.css` missing or stale** → page renders completely unstyled
+- **`parseMoodleJsonTs()` full precision** — required for INFERRED oldest-event selection; do not simplify to date-only
 
 ---
 
-## Making Changes
+## Context Triggers
 
-### Adding a new activity type label
+**Proceed without asking:**
+- Fix is localized to one function with unambiguous intent
+- Adding/editing a `MODULE_FULLNAMES` entry
+- Changing BATCH size, timeouts, or delay values
+- CSS-only changes that don't add new Tailwind classes
 
-Edit `MODULE_FULLNAMES` in `app.js` (line 38). Key is the Moodle `modname` (lowercase), value is the display string.
+**Ask first:**
+- Changing tab split logic (`modname !== 'url'`) — affects both tabs and CSV filenames
+- Changing row object shape — `renderTable`, `exportCSV`, `applySort` all depend on it
+- Adding a new credential field — touches `index.html` inputs, `app.js` fetchBtn handler, Alpine component
+- Any change to `server.js` / `server.py` request routing
 
-### Changing the tab split logic
+---
 
-Edit lines 576–577 in `app.js`:
-```js
-teacherData = tableData.filter(r => r.modname !== 'url');
-oerData     = tableData.filter(r => r.modname === 'url');
-```
+## Recipes
 
-### Adding a new sort mode
+**New activity type label:** Edit `MODULE_FULLNAMES` in `app.js` (~line 38). Key = Moodle `modname` string.
 
-1. Add a button in `index.html` with a new `id`
-2. Add an event listener in `app.js` that sets `sortMode` and calls `renderActiveTab()`
-3. Add the case to `applySort()` and `updateSortUI()`
+**New sort mode:** Button in `index.html` → click listener sets `sortMode` + calls `renderActiveTab()` → add case in `applySort()` + `updateSortUI()`.
 
-### Changing the CSV columns
+**Change CSV columns:** Edit `hdr` array and `body` row mapping inside `exportCSV()`.
 
-Edit the `hdr` array and `body` mapping inside `exportCSV()` (`app.js` line 480).
-
-### Rebuilding CSS after HTML changes
-
-```bash
-npm run build
-```
+**New icon:** Add SVG to `src/icons/`, use `<img class="icon-img" alt="">`, add row to Icons table above.

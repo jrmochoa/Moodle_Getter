@@ -1,21 +1,50 @@
-const statusDiv        = document.getElementById('statusMessage');
-const tbody            = document.getElementById('reportTbody');
-const rowCountEl       = document.getElementById('rowCount');
-const downloadBtn      = document.getElementById('downloadBtn');
-const progressWrap     = document.getElementById('progressWrap');
-const progressBar      = document.getElementById('progressBar');
-const progressPct      = document.getElementById('progressPct');
-const progressLabel    = document.getElementById('progressLabel');
+// ── DOM cache ─────────────────────────────────────────────────────────────────
+const statusDiv   = document.getElementById('statusMessage');
+const tbody       = document.getElementById('reportTbody');
+const rowCountEl  = document.getElementById('rowCount');
+const downloadBtn = document.getElementById('downloadBtn');
+const fetchBtn          = document.getElementById('fetchBtn');
+const fetchBtnText      = document.getElementById('fetchBtnText');
+const fetchProgressFill = document.getElementById('fetchProgress');
+const dupUrlModal      = document.getElementById('dupUrlModal');
+const dupUrlList       = document.getElementById('dupUrlList');
+const dupUrlConfirmBtn = document.getElementById('dupUrlConfirmBtn');
+const dupUrlCancelBtn  = document.getElementById('dupUrlCancelBtn');
+const heatmapBtn          = document.getElementById('heatmapBtn');
+const heatmapModal        = document.getElementById('heatmapModal');
+const heatmapCloseBtn     = document.getElementById('heatmapCloseBtn');
+const heatmapCourseSelect = document.getElementById('heatmapCourseSelect');
+const heatmapContent      = document.getElementById('heatmapContent');
+const heatmapPrevBtn      = document.getElementById('heatmapPrevBtn');
+const heatmapNextBtn      = document.getElementById('heatmapNextBtn');
+const hmTooltip           = document.getElementById('hmTooltip');
 
-let tableData    = [];
-let teacherData  = [];
-let oerData      = [];
-let activeTab    = 'teachers'; // 'teachers' | 'oer'
-let sortMode     = 'oldest';   // 'oldest' | 'newest' | 'course'
-let currentCourseName = '';
-let currentCourseId   = null;
-let currentRows       = [];
-let activeStrategies  = [];
+// ── State ─────────────────────────────────────────────────────────────────────
+let tableData            = [];
+let allData              = [];
+let teacherData          = [];
+let oerData              = [];
+let snapshotAllData      = [];
+let snapshotTeacherData  = [];
+let snapshotOerData      = [];
+let snapshotHiddenTypes  = new Set();
+let snapshotHiddenYears  = new Set();
+let snapshotHiddenMonths = new Set();
+let activeTab        = 'all'; // 'all' | 'teachers' | 'oer'
+let sortCol          = null;       // null | 'rawTs' | 'fullname' | 'activityName' | 'activityType' | 'subject' | 'strategy'
+let sortDir          = 'asc';      // 'asc' | 'desc'
+let currentRows      = [];
+let activeStrategies = [];
+let activeSubjects   = [];
+let hiddenTypes      = new Set();
+let hiddenYears      = new Set();
+let hiddenMonths     = new Set();
+let filterDropdown     = null;
+let dateFilterDropdown = null;
+let heatmapCourses       = [];
+let heatmapCourseIdx     = 0;
+let hmTooltipHideTimer   = null;
+let courseRegistry       = []; // [{courseGroupIndex, courseId, courseName, courseBaseUrl}] — one entry per fetched course
 
 const PROXY_BASE = 'http://localhost:8080';
 
@@ -26,13 +55,13 @@ function isLocal() {
 }
 
 function apiProxyUrl(targetUrl) {
-    if (!isLocal()) return targetUrl;
-    return `${PROXY_BASE}/proxy?url=${encodeURIComponent(targetUrl)}&accept=application%2Fjson`;
+    const base = isLocal() ? PROXY_BASE : '';
+    return `${base}/proxy?url=${encodeURIComponent(targetUrl)}&accept=application%2Fjson`;
 }
 
 function htmlProxyUrl(targetUrl, cookie) {
-    if (!isLocal()) return targetUrl;
-    let u = `${PROXY_BASE}/proxy?url=${encodeURIComponent(targetUrl)}&accept=text%2Fhtml`;
+    const base = isLocal() ? PROXY_BASE : '';
+    let u = `${base}/proxy?url=${encodeURIComponent(targetUrl)}&accept=text%2Fhtml`;
     if (cookie) u += `&cookie=${encodeURIComponent(cookie)}`;
     return u;
 }
@@ -50,6 +79,8 @@ const MODULE_FULLNAMES = {
     subcourse:'Subcourse', scheduler:'Scheduler', checklist:'Checklist',
 };
 const modFullName = m => MODULE_FULLNAMES[m] || (m ? m.charAt(0).toUpperCase()+m.slice(1) : 'Unknown');
+const MONTH_NAMES  = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+const MONTH_SHORT  = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
 
 // ── Strategies — in-memory fallback seed ─────────────────────────────────────
 
@@ -118,18 +149,80 @@ function getStrategy(activityName) {
     return '';
 }
 
-function setStatus(msg, isError=false) {
-    statusDiv.textContent = msg;
-    statusDiv.style.cssText = isError
-        ? 'margin-top:12px;padding:10px 14px;border-radius:8px;background:#fef2f2;border-left:3px solid #ef4444;font-size:13px;color:#b91c1c'
-        : 'margin-top:12px;padding:10px 14px;border-radius:8px;background:#f1f5f9;border-left:3px solid #0284c7;font-size:13px;color:#475569';
+// ── Subjects — in-memory fallback seed ───────────────────────────────────────
+
+const DEFAULT_SUBJECTS = [
+    { name:'Christian Living and Values Education', keywords:['Christian Living','Values Education','CLE'], isDefault:true },
+    { name:'Computer',      keywords:['Computer','ICT','Programming'],               isDefault:true },
+    { name:'English',       keywords:['English','Reading'],                          isDefault:true },
+    { name:'Filipino',      keywords:['Filipino','Tagalog'],                         isDefault:true },
+    { name:'MAPEH',         keywords:['MAPEH','Music','Arts','PE','Health'],          isDefault:true },
+    { name:'Mathematics',   keywords:['Math','Mathematics','Algebra','Geometry'],    isDefault:true },
+    { name:'Science',       keywords:['Science','Physics','Chemistry','Biology'],    isDefault:true },
+    { name:'Social Studies',keywords:['Social Studies','History','Geography'],       isDefault:true },
+    { name:'TLE',           keywords:['TLE','Technology','Livelihood'],              isDefault:true },
+];
+
+async function loadSubjects() {
+    try {
+        const res = await fetch('/subjects');
+        if (!res.ok) throw new Error();
+        const data = await res.json();
+        activeSubjects = data.subjects;
+    } catch (_) {
+        activeSubjects = DEFAULT_SUBJECTS;
+    }
 }
 
-function setProgress(current, total, label='') {
-    const pct = total > 0 ? Math.round((current / total) * 100) : 0;
-    progressBar.style.width = pct + '%';
-    progressPct.textContent = pct + '%';
-    if (label) progressLabel.textContent = label;
+function getSubject(courseName) {
+    const name = (courseName || '').toLowerCase();
+    for (const s of activeSubjects) {
+        if (s.keywords?.some(kw => name.includes(kw.toLowerCase()))) return s.name;
+    }
+    return 'Uncategorized';
+}
+
+// ── UI helpers ────────────────────────────────────────────────────────────────
+
+function isDarkMode() {
+    return !document.body.classList.contains('light-mode');
+}
+
+function setStatus(msg, isError=false) {
+    statusDiv.textContent = msg;
+    statusDiv.className = `status-msg${isError ? ' status-msg--error' : ''}`;
+}
+
+function setBtnLoading(text = 'Fetching…', frac = 0) {
+    fetchBtn.disabled = true;
+    fetchBtn.className = 'tech-btn btn-full btn-loading';
+    fetchBtnText.textContent = text;
+    fetchProgressFill.style.width = Math.min(Math.round(frac * 100), 100) + '%';
+}
+
+function setBtnDefault() {
+    fetchProgressFill.style.transition = 'none';
+    fetchProgressFill.style.width = '0%';
+    requestAnimationFrame(() => { fetchProgressFill.style.transition = ''; });
+    fetchBtn.disabled = false;
+    fetchBtn.className = 'tech-btn btn-full';
+    fetchBtnText.textContent = 'Generate';
+}
+
+function setBtnSuccess(text = '✓ Done') {
+    fetchProgressFill.style.width = '100%';
+    fetchBtn.disabled = false;
+    fetchBtn.className = 'tech-btn btn-full btn-success';
+    fetchBtnText.textContent = text;
+    setTimeout(setBtnDefault, 2000);
+}
+
+function setBtnError(text = '✗ Failed') {
+    fetchProgressFill.style.width = '100%';
+    fetchBtn.disabled = false;
+    fetchBtn.className = 'tech-btn btn-full btn-error';
+    fetchBtnText.textContent = text;
+    setTimeout(setBtnDefault, 2500);
 }
 
 function escapeHtml(s) {
@@ -186,9 +279,7 @@ function fileExtension(mod) {
 function activityTypeLabel(modname, mod) {
     if (!modname) return 'Unknown';
     if (modname === 'resource') {
-        // mod.name priority: activity name containing "presentation" wins everything
         if (mod?.name && /presentation/i.test(mod.name)) return 'File - Presentation';
-        // Filename priority: filename containing "presentation" wins over extension map
         if (mod?.contents) {
             for (const c of mod.contents) {
                 if (c.filename && /presentation/i.test(c.filename)) return 'File - Presentation';
@@ -217,7 +308,7 @@ function buildLogUrl(baseUrl, courseId, modId, page) {
     return u;
 }
 
-// ── WS API ───────────────────────────────────────────────────────────────────
+// ── WS API ────────────────────────────────────────────────────────────────────
 
 async function apiFetch(baseUrl, token, fn, extra={}) {
     const p = new URLSearchParams({wstoken:token, wsfunction:fn, moodlewsrestformat:'json', ...extra});
@@ -256,115 +347,116 @@ async function fetchFirstAccessor(baseUrl, token, courseId) {
     return null;
 }
 
-// ── Log page helpers ─────────────────────────────────────────────────────────
+// ── Log helpers — JSON download ───────────────────────────────────────────────
 
-function parseMoodleDate(raw) {
-    if (!raw) return null;
-    const d = new Date(raw);
-    if (!isNaN(d.getTime())) {
-        const mm = String(d.getMonth()+1).padStart(2,'0');
-        const dd = String(d.getDate()).padStart(2,'0');
-        return `${mm}/${dd}/${d.getFullYear()}`;
-    }
-    const m1 = raw.match(/(\d{1,2})\s+([A-Za-z]+)\s+(\d{4})/);
-    if (m1) {
-        const d2 = new Date(`${m1[2]} ${m1[1]}, ${m1[3]}`);
-        if (!isNaN(d2.getTime())) {
-            const mm = String(d2.getMonth()+1).padStart(2,'0');
-            const dd = String(d2.getDate()).padStart(2,'0');
-            return `${mm}/${dd}/${d2.getFullYear()}`;
-        }
-    }
-    return null;
+function parseMoodleJsonDate(timeStr) {
+    if (!timeStr) return null;
+    const s = timeStr.replace(/\\/g, '');
+    // Moodle format: DD/MM/YY, HH:MM:SS  →  MM/DD/YYYY
+    const m = s.match(/^(\d{1,2})\/(\d{1,2})\/(\d{2,4})/);
+    if (!m) return null;
+    const day = m[1].padStart(2, '0');
+    const mon = m[2].padStart(2, '0');
+    const yr  = m[3].length === 2 ? `20${m[3]}` : m[3];
+    if (isNaN(new Date(`${yr}-${mon}-${day}`).getTime())) return null;
+    return `${mon}/${day}/${yr}`;
 }
 
-async function fetchLogDoc(url, sessionCookie) {
+function parseMoodleJsonTs(timeStr) {
+    if (!timeStr) return 0;
+    const s = timeStr.replace(/\\/g, '');
+    const m = s.match(/^(\d{1,2})\/(\d{1,2})\/(\d{2,4}),?\s*(\d{2}):(\d{2}):(\d{2})/);
+    if (!m) return 0;
+    const yr = m[3].length === 2 ? `20${m[3]}` : m[3];
+    const d  = new Date(`${yr}-${m[2].padStart(2,'0')}-${m[1].padStart(2,'0')}T${m[4]}:${m[5]}:${m[6]}`);
+    return isNaN(d.getTime()) ? 0 : Math.floor(d.getTime() / 1000);
+}
+
+async function fetchSesskey(baseUrl, courseId, sessionCookie) {
     try {
-        let res;
-        if (isLocal()) {
-            res = await fetch(htmlProxyUrl(url, sessionCookie), {
-                headers: { 'Accept': 'text/html,application/xhtml+xml' }
-            });
-        } else {
-            const headers = { 'Accept': 'text/html,application/xhtml+xml' };
-            if (sessionCookie) headers['Cookie'] = `MoodleSession=${sessionCookie}`;
-            res = await fetch(url, { credentials: 'include', headers });
-        }
+        const pageUrl  = `${baseUrl}/course/view.php?id=${courseId}`;
+        const proxyUrl = isLocal()
+            ? `${PROXY_BASE}/proxy?url=${encodeURIComponent(pageUrl)}&accept=text%2Fhtml&cookie=${encodeURIComponent(sessionCookie)}`
+            : pageUrl;
+        const controller = new AbortController();
+        const timer = setTimeout(() => controller.abort(), 15000);
+        try {
+            const res = await fetch(proxyUrl, { signal: controller.signal });
+            if (!res.ok) return null;
+            const m = (await res.text()).match(/"sesskey":"([a-zA-Z0-9]+)"/);
+            return m ? m[1] : null;
+        } finally { clearTimeout(timer); }
+    } catch (_) { return null; }
+}
+
+async function fetchModuleLogsJson(baseUrl, courseId, cmid, sesskey, sessionCookie, modaction = 'c') {
+    const actionParam = modaction ? `&modaction=${encodeURIComponent(modaction)}` : '';
+    const targetUrl =
+        `${baseUrl}/report/log/index.php?chooselog=1&showusers=0&showcourses=0` +
+        `&id=${courseId}&group=&user=&date=&modid=${cmid}${actionParam}&origin=` +
+        `&edulevel=-1&logreader=logstore_standard&download=json&sesskey=${sesskey}`;
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), 30000);
+    try {
+        const proxyUrl = isLocal()
+            ? `${PROXY_BASE}/proxy?url=${encodeURIComponent(targetUrl)}&accept=application%2Fjson&cookie=${encodeURIComponent(sessionCookie)}`
+            : targetUrl;
+        const res = await fetch(proxyUrl, { signal: controller.signal });
         if (!res.ok) return null;
-        return new DOMParser().parseFromString(await res.text(), 'text/html');
-    } catch(e) {
-        if (e.message?.includes('Failed to fetch') || e.name === 'TypeError') {
-            document.getElementById('corsNotice').style.display = 'block';
-        }
-        return null;
-    }
+        const parsed = JSON.parse(await res.text());
+        return Array.isArray(parsed[0]) ? parsed[0] : (Array.isArray(parsed) ? parsed : []);
+    } catch (_) { return null; }
+    finally { clearTimeout(timer); }
 }
 
-function parseLastPageNum(doc) {
-    let max = 0;
-    for (const a of doc.querySelectorAll('a[href*="page="]')) {
-        const href = a.getAttribute('href') || '';
-        const m = href.match(/[?&]page=(\d+)/);
-        if (m) { const n = parseInt(m[1], 10); if (n > max) max = n; }
+async function scrapeLogPage(baseUrl, courseId, cmid, sesskey, sessionCookie) {
+    // Step 1: creation-only fetch (modaction=c) — fast, targeted
+    const creationEntries = await fetchModuleLogsJson(baseUrl, courseId, cmid, sesskey, sessionCookie, 'c');
+    if (creationEntries?.length) {
+        const created = creationEntries.find(e => e.eventname === 'Course module created');
+        if (created) {
+            const date = parseMoodleJsonDate(created.time || '');
+            const fullname = created.userfullname || '';
+            let profileUrl = '';
+            const uid = (created.description || '').match(/user with id '(\d+)'/);
+            if (uid) profileUrl = `${baseUrl}/user/profile.php?id=${uid[1]}`;
+            return { date: date || '', fullname, profileUrl, dateSource: 'VERIFIED', eventLabel: 'Course module created' };
+        }
     }
-    return max;
-}
 
-function parseCreatedEvent(doc) {
-    const candidates = [
-        ...doc.querySelectorAll('table.generaltable tbody tr'),
-        ...doc.querySelectorAll('table[data-region="report-table"] tbody tr'),
-        ...doc.querySelectorAll('#report_log table tbody tr'),
-        ...doc.querySelectorAll('tr'),
-    ];
-    const seen = new WeakSet();
-    for (const row of candidates) {
-        if (seen.has(row)) continue;
-        seen.add(row);
-        const cells = row.querySelectorAll('td');
-        if (cells.length < 2) continue;
-        let found = false;
-        for (const cell of cells) {
-            if (cell.textContent.trim().toLowerCase().includes('course module created')) { found = true; break; }
+    // Step 2: broad all-events fetch — only reached when Step 1 returns nothing
+    const allEntries = await fetchModuleLogsJson(baseUrl, courseId, cmid, sesskey, sessionCookie, '');
+    if (allEntries?.length) {
+        const withTs = allEntries
+            .map(e => ({ ...e, _ts: parseMoodleJsonTs(e.time) }))
+            .filter(e => e._ts > 0)
+            .sort((a, b) => a._ts - b._ts);
+        if (withTs.length > 0) {
+            const oldest = withTs[0];
+            const date = parseMoodleJsonDate(oldest.time || '');
+            const fullname = oldest.userfullname || '';
+            let profileUrl = '';
+            const uid = (oldest.description || '').match(/user with id '(\d+)'/);
+            if (uid) profileUrl = `${baseUrl}/user/profile.php?id=${uid[1]}`;
+            return { date: date || '', fullname, profileUrl, dateSource: 'INFERRED', eventLabel: `First access: ${oldest.eventname || 'user access'}` };
         }
-        if (!found) continue;
-        const rawDate = cells[0]?.textContent?.trim() || '';
-        let fullname = '', profileUrl = '';
-        for (let i = 0; i < Math.min(cells.length, 4); i++) {
-            const link = cells[i].querySelector('a[href*="/user/"]');
-            if (link) { fullname = link.textContent.trim(); profileUrl = link.href; break; }
-        }
-        const parsedDate = parseMoodleDate(rawDate);
-        if (parsedDate || fullname) return { date: parsedDate || rawDate, fullname, profileUrl };
     }
+
     return null;
 }
 
-async function scrapeLogPage(baseUrl, courseId, cmid, sessionCookie) {
-    const page0Url = buildLogUrl(baseUrl, courseId, cmid, 0);
-    const doc0 = await fetchLogDoc(page0Url, sessionCookie);
-    if (!doc0) return null;
+// ── Build rows ────────────────────────────────────────────────────────────────
 
-    const fromPage0 = parseCreatedEvent(doc0);
-    if (fromPage0) return fromPage0;
-
-    const lastPage = parseLastPageNum(doc0);
-    if (lastPage <= 0) return null;
-
-    const docLast = await fetchLogDoc(buildLogUrl(baseUrl, courseId, cmid, lastPage), sessionCookie);
-    if (!docLast) return null;
-
-    return parseCreatedEvent(docLast);
-}
-
-// ── Build rows ───────────────────────────────────────────────────────────────
-
-async function buildRows(sections, token, baseUrl, courseId, sessionCookie, fallbackUser) {
+async function buildRows(sections, baseUrl, courseId, sessionCookie, fallbackUser, courseName, detectedSubject, courseGroupIndex, onProgress) {
     const allMods = sections.flatMap(s => s.modules || []);
     const total   = allMods.length;
     let done = 0;
-    progressWrap.style.display = 'block';
-    setProgress(0, total, `Fetching ${total} log pages…`);
+
+    onProgress?.(0, `Fetching sesskey…`);
+    const sesskey = await fetchSesskey(baseUrl, courseId, sessionCookie);
+    if (!sesskey) setStatus('Warning: could not fetch sesskey — log dates may be unavailable.');
+
+    onProgress?.(0, `Fetching ${total} log pages…`);
 
     const BATCH = 6;
     const results = new Array(allMods.length);
@@ -372,205 +464,740 @@ async function buildRows(sections, token, baseUrl, courseId, sessionCookie, fall
     for (let start = 0; start < allMods.length; start += BATCH) {
         const slice = allMods.slice(start, start + BATCH);
         const settled = await Promise.allSettled(
-            slice.map(mod => scrapeLogPage(baseUrl, courseId, mod.id, sessionCookie))
+            slice.map(mod => scrapeLogPage(baseUrl, courseId, mod.id, sesskey, sessionCookie))
         );
         settled.forEach((r, i) => { results[start + i] = r.value ?? null; });
         done += slice.length;
-        setProgress(done, total, `Fetched ${done} / ${total}…`);
+        onProgress?.(total > 0 ? done / total : 1, `${done}/${total} modules`);
     }
 
     const rows = allMods.map((mod, i) => {
-        const logData = results[i];
+        const logData    = results[i];
+        const dateSource = logData?.dateSource || 'ESTIMATED';
+        const eventLabel = logData?.eventLabel || 'Module metadata (mod.added)';
         return {
-            date:         logData?.date      || formatDate(mod.added || mod.timecreated || mod.timemodified || 0),
-            rawTs:        parseDateStrToTs(logData?.date) || mod.added || mod.timecreated || 0,
-            fromLog:      !!logData,
-            fullname:     logData?.fullname   || fallbackUser?.fullname   || 'Unknown',
-            profileUrl:   logData?.profileUrl || fallbackUser?.profileUrl || null,
-            activityName: mod.name            || `Unnamed ${mod.modname}`,
-            activityUrl:  activityViewUrl(mod, baseUrl),
-            activityType: activityTypeLabel(mod.modname, mod),
-            strategy:     getStrategy(mod.name || ''),
-            modname:      mod.modname         || '',
-            courseIndex:  i,
-            logUrl:       buildLogUrl(baseUrl, courseId, mod.id),
+            date:             logData?.date      || formatDate(mod.added || mod.timecreated || mod.timemodified || 0),
+            rawTs:            parseDateStrToTs(logData?.date) || mod.added || mod.timecreated || 0,
+            dateSource,
+            eventLabel,
+            fromLog:          dateSource === 'VERIFIED',
+            fullname:         logData?.fullname   || fallbackUser?.fullname   || 'Unknown',
+            profileUrl:       logData?.profileUrl || fallbackUser?.profileUrl || null,
+            activityName:     mod.name            || `Unnamed ${mod.modname}`,
+            activityUrl:      activityViewUrl(mod, baseUrl),
+            activityType:     activityTypeLabel(mod.modname, mod),
+            strategy:         getStrategy(mod.name || ''),
+            subject:          detectedSubject,
+            modname:          mod.modname         || '',
+            courseIndex:      i,
+            courseGroupIndex: courseGroupIndex,
+            courseId:         courseId,
+            courseName:       courseName || `Course ${courseId}`,
+            courseBaseUrl:    baseUrl,
+            logUrl:           buildLogUrl(baseUrl, courseId, mod.id),
         };
     });
 
-    setProgress(total, total, 'Done!');
-    setTimeout(() => progressWrap.style.display = 'none', 1500);
     return rows;
 }
 
-// ── Sort & filter ─────────────────────────────────────────────────────────────
+// ── Row exclusion ─────────────────────────────────────────────────────────────
 
-function applySort(rows) {
-    const sorted = [...rows];
-    if (sortMode === 'newest') {
-        sorted.sort((a, b) => b.rawTs !== a.rawTs ? b.rawTs - a.rawTs : parseDateStrToTs(b.date) - parseDateStrToTs(a.date));
-    } else if (sortMode === 'course') {
-        sorted.sort((a, b) => a.courseIndex - b.courseIndex);
-    } else {
-        sorted.sort((a, b) => a.rawTs !== b.rawTs ? a.rawTs - b.rawTs : parseDateStrToTs(a.date) - parseDateStrToTs(b.date));
+function isExcludedRow(r) {
+    const isAnnouncementForum =
+        /announcement/i.test(r.activityName || '') &&
+        (r.activityType || '').toLowerCase() === 'forum';
+    return isAnnouncementForum && (r.dateSource === 'ESTIMATED' || !r.date || r.dateSource === 'INFERRED');
+}
+
+// ── Deduplication ────────────────────────────────────────────────────────────
+
+function deduplicateActivityNames(rows) {
+    const seen = new Map();
+    for (const r of rows) {
+        const key = `${r.courseGroupIndex}::${r.activityName}`;
+        const n = (seen.get(key) || 0) + 1;
+        seen.set(key, n);
+        if (n > 1) r.activityName = `${r.activityName} (${n})`;
     }
+}
+
+// ── Sort ──────────────────────────────────────────────────────────────────────
+
+function applyHeaderSort(rows) {
+    if (!sortCol) return [...rows];
+    const sorted = [...rows];
+    sorted.sort((a, b) => {
+        if (sortCol === 'rawTs') {
+            return sortDir === 'asc' ? a.rawTs - b.rawTs : b.rawTs - a.rawTs;
+        }
+        const va = String(a[sortCol] || '').toLowerCase();
+        const vb = String(b[sortCol] || '').toLowerCase();
+        const cmp = va.localeCompare(vb);
+        return sortDir === 'asc' ? cmp : -cmp;
+    });
     return sorted;
 }
 
 function getActiveRows() {
-    return activeTab === 'oer' ? oerData : teacherData;
+    if (activeTab === 'oer')      return oerData;
+    if (activeTab === 'teachers') return teacherData;
+    return allData;
 }
 
-// ── Render ───────────────────────────────────────────────────────────────────
+// ── Render ────────────────────────────────────────────────────────────────────
+
+function buildDataRow(row, idx) {
+    const dark = isDarkMode();
+    const tr = document.createElement('tr');
+    tr.style.borderBottom = dark ? '1px solid rgba(139,92,246,.07)' : '1px solid #f1f5f9';
+    tr.onmouseenter = () => tr.style.background = dark ? 'rgba(139,92,246,.06)' : '#f0f9ff';
+    tr.onmouseleave = () => tr.style.background = '';
+
+    const tdNum = document.createElement('td');
+    tdNum.className = 'td-num';
+    tdNum.style.color = dark ? 'rgba(148,163,184,.5)' : '#94a3b8';
+    tdNum.textContent = idx;
+
+    const tdDate = document.createElement('td');
+    tdDate.className = 'td-date';
+    const BADGE_TEXT = { VERIFIED:'LOG', INFERRED:'FIRST', ESTIMATED:'EST' };
+    const badgeType  = (row.dateSource || 'ESTIMATED').toLowerCase();
+    const badge = `<span class="date-badge date-badge-${badgeType}" title="Source: ${escapeHtml(row.eventLabel || '')}">${BADGE_TEXT[row.dateSource] || 'EST'}</span>`;
+    tdDate.innerHTML = `<span class="date-chip">${escapeHtml(row.date)}</span>${badge}`;
+
+    const tdUser = document.createElement('td');
+    tdUser.className = 'td-cell';
+    tdUser.innerHTML = row.profileUrl
+        ? `<a href="${escapeHtml(row.profileUrl)}" target="_blank" rel="noopener" class="table-link" style="color:${dark ? '#a78bfa' : '#0369a1'}">${escapeHtml(row.fullname)}</a>`
+        : `<span style="color:${dark ? 'rgba(196,181,253,.75)' : '#475569'}">${escapeHtml(row.fullname)}</span>`;
+
+    const tdName = document.createElement('td');
+    tdName.className = 'td-cell';
+    tdName.innerHTML = row.activityUrl
+        ? `<a href="${escapeHtml(row.activityUrl)}" target="_blank" rel="noopener" class="table-link" style="color:${dark ? '#c4b5fd' : '#7c3aed'}">${escapeHtml(row.activityName)}</a>`
+        : `<span class="table-text-muted" style="color:${dark ? '#e2e8f0' : '#334155'}">${escapeHtml(row.activityName)}</span>`;
+
+    const tdType = document.createElement('td');
+    tdType.className = 'td-cell';
+    tdType.innerHTML = `<span class="activity-type-chip">${escapeHtml(row.activityType)}</span>`;
+
+    const tdSubject = document.createElement('td');
+    tdSubject.className = 'td-cell';
+    const subjectLink = document.createElement('a');
+    subjectLink.href    = `${row.courseBaseUrl}/course/view.php?id=${row.courseId}`;
+    subjectLink.target  = '_blank';
+    subjectLink.rel     = 'noopener';
+    subjectLink.title   = row.courseName || '';
+    subjectLink.textContent = row.subject || 'Uncategorized';
+    subjectLink.className = 'subject-link';
+    subjectLink.style.color = dark ? '#a78bfa' : '#7c3aed';
+    subjectLink.onmouseover = () => subjectLink.style.textDecoration = 'underline';
+    subjectLink.onmouseout  = () => subjectLink.style.textDecoration = 'none';
+    tdSubject.appendChild(subjectLink);
+
+    const tdStrategy = document.createElement('td');
+    tdStrategy.className = 'td-strategy';
+    const strategySel = document.createElement('select');
+    strategySel.className = 'strategy-sel';
+    strategySel.title = row.strategy || '';
+    const stratBlank = document.createElement('option');
+    stratBlank.value = '';
+    stratBlank.textContent = '—';
+    strategySel.appendChild(stratBlank);
+    for (const s of activeStrategies) {
+        const opt = document.createElement('option');
+        opt.value = s.name;
+        opt.textContent = s.name;
+        if (s.name === row.strategy) opt.selected = true;
+        strategySel.appendChild(opt);
+    }
+    strategySel.addEventListener('change', () => {
+        row.strategy = strategySel.value;
+        strategySel.title = strategySel.value;
+    });
+    tdStrategy.appendChild(strategySel);
+
+    const tdLog = document.createElement('td');
+    tdLog.className = 'td-log';
+    tdLog.innerHTML = `<a href="${escapeHtml(row.logUrl)}" target="_blank" rel="noopener" class="log-btn" title="View logs">
+        <img src="src/icons/external-link.svg" width="13" height="13" class="icon-img" alt="">
+    </a>`;
+
+    tr.append(tdNum, tdDate, tdUser, tdType, tdName, tdSubject, tdStrategy, tdLog);
+    return tr;
+}
 
 function renderTable(rows) {
     currentRows = rows || [];
-
-    // Inject Strategy column header once (lives in index.html thead)
-    const headerRow = document.querySelector('thead tr');
-    if (headerRow && !document.getElementById('thStrategy')) {
-        const thType = [...headerRow.querySelectorAll('th')].find(th => th.textContent.trim() === 'Activity Type');
-        if (thType) {
-            const th = document.createElement('th');
-            th.id = 'thStrategy';
-            th.style.cssText = 'padding:10px 16px;text-align:left;font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.07em;color:rgba(167,139,250,.55);white-space:nowrap';
-            th.textContent = 'Strategy';
-            thType.after(th);
-        }
-    }
-
+    const NCOLS = 8; // #, Date, User, Activity Name, Activity Type, Subject, Strategy, Logs
     tbody.innerHTML = '';
-    if (!rows?.length) {
-        tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;padding:64px 20px;color:#94a3b8;font-size:13px;font-style:italic">No activities found.</td></tr>';
-        rowCountEl.textContent = '0 entries';
-        return;
+    const frag = document.createDocumentFragment();
+    const showSeparators = sortCol === null;
+    let visibleIdx = 0;
+
+    if (!showSeparators) {
+        if (!rows?.length) {
+            tbody.innerHTML = `<tr><td colspan="${NCOLS}" class="empty-state-cell">No activities found.</td></tr>`;
+            rowCountEl.textContent = '0 entries';
+            return;
+        }
+        rows.forEach(row => { visibleIdx++; frag.appendChild(buildDataRow(row, visibleIdx)); });
+    } else {
+        // Ordered unique courses from courseRegistry (includes courses with 0 modules)
+        const courseGroups = courseRegistry;
+
+        if (!courseGroups.length) {
+            tbody.innerHTML = `<tr><td colspan="${NCOLS}" class="empty-state-cell">No activities found.</td></tr>`;
+            rowCountEl.textContent = '0 entries';
+            return;
+        }
+
+        // Filtered rows keyed by course
+        const rowsByGroup = new Map();
+        (rows || []).forEach(r => {
+            if (!rowsByGroup.has(r.courseGroupIndex)) rowsByGroup.set(r.courseGroupIndex, []);
+            rowsByGroup.get(r.courseGroupIndex).push(r);
+        });
+
+        courseGroups.forEach(cg => {
+            const sepTr = document.createElement('tr');
+            const sepTd = document.createElement('td');
+            sepTd.colSpan = NCOLS;
+            sepTd.className = 'course-sep-cell';
+
+            const iconBtn = document.createElement('button');
+            iconBtn.className = 'tech-btn btn-icon-only course-sep-heatmap-btn';
+            iconBtn.title = 'View activity heatmap';
+            const iconImg = document.createElement('img');
+            iconImg.src = 'src/icons/book-open-check.svg';
+            iconImg.className = 'icon-img';
+            iconImg.alt = '';
+            iconBtn.appendChild(iconImg);
+            iconBtn.addEventListener('click', e => {
+                e.preventDefault();
+                e.stopPropagation();
+                openHeatmapModal(cg.courseGroupIndex);
+            });
+
+            const link = document.createElement('a');
+            link.href = `${cg.courseBaseUrl}/course/view.php?id=${cg.courseId}`;
+            link.target = '_blank';
+            link.rel = 'noopener';
+            link.className = 'course-sep-link';
+            link.textContent = cg.courseName;
+
+            const sepInner = document.createElement('div');
+            sepInner.className = 'course-sep-inner';
+            sepInner.appendChild(iconBtn);
+            sepInner.appendChild(link);
+            sepTd.appendChild(sepInner);
+            sepTr.appendChild(sepTd);
+            frag.appendChild(sepTr);
+
+            const courseRows = rowsByGroup.get(cg.courseGroupIndex) || [];
+            if (!courseRows.length) {
+                const emptyTr = document.createElement('tr');
+                const emptyTd = document.createElement('td');
+                emptyTd.colSpan = NCOLS;
+                emptyTd.className = 'course-empty-cell';
+                emptyTd.textContent = 'No data.';
+                emptyTr.appendChild(emptyTd);
+                frag.appendChild(emptyTr);
+            } else {
+                courseRows.forEach(row => { visibleIdx++; frag.appendChild(buildDataRow(row, visibleIdx)); });
+            }
+        });
     }
 
-    const frag = document.createDocumentFragment();
-    rows.forEach((row, idx) => {
-        const tr = document.createElement('tr');
-        tr.style.borderBottom = '1px solid #f1f5f9';
-        tr.onmouseenter = () => tr.style.background = '#f0f9ff';
-        tr.onmouseleave = () => tr.style.background = '';
-
-        const tdNum = document.createElement('td');
-        tdNum.style.cssText = 'padding:10px 16px;color:#94a3b8;font-size:11px;font-family:monospace';
-        tdNum.textContent = idx + 1;
-
-        const tdDate = document.createElement('td');
-        tdDate.style.cssText = 'padding:10px 16px;white-space:nowrap';
-        const badge = row.fromLog
-            ? `<span style="margin-left:6px;font-size:10px;font-weight:700;background:#d1fae5;color:#059669;border:1px solid #a7f3d0;padding:1px 6px;border-radius:99px">LOG</span>`
-            : `<span style="margin-left:6px;font-size:10px;font-weight:700;background:#fef3c7;color:#d97706;border:1px solid #fde68a;padding:1px 6px;border-radius:99px" title="Could not read log page — using mod.added">EST</span>`;
-        tdDate.innerHTML = `<span style="font-family:monospace;font-size:12px;background:#f1f5f9;color:#334155;padding:3px 10px;border-radius:6px;font-weight:600">${escapeHtml(row.date)}</span>${badge}`;
-
-        const tdUser = document.createElement('td');
-        tdUser.style.cssText = 'padding:10px 16px';
-        tdUser.innerHTML = row.profileUrl
-            ? `<a href="${escapeHtml(row.profileUrl)}" target="_blank" rel="noopener" style="color:#0369a1;font-weight:600;text-decoration:none" onmouseover="this.style.textDecoration='underline'" onmouseout="this.style.textDecoration='none'">${escapeHtml(row.fullname)}</a>`
-            : `<span style="color:#475569">${escapeHtml(row.fullname)}</span>`;
-
-        const tdName = document.createElement('td');
-        tdName.style.cssText = 'padding:10px 16px';
-        tdName.innerHTML = row.activityUrl
-            ? `<a href="${escapeHtml(row.activityUrl)}" target="_blank" rel="noopener" style="color:#7c3aed;font-weight:600;text-decoration:none" onmouseover="this.style.textDecoration='underline'" onmouseout="this.style.textDecoration='none'">${escapeHtml(row.activityName)}</a>`
-            : `<span style="color:#334155;font-weight:500">${escapeHtml(row.activityName)}</span>`;
-
-        const tdType = document.createElement('td');
-        tdType.style.cssText = 'padding:10px 16px';
-        tdType.innerHTML = `<span style="font-size:11px;font-weight:600;background:#f0f9ff;color:#0369a1;border:1px solid #bae6fd;padding:2px 10px;border-radius:99px">${escapeHtml(row.activityType)}</span>`;
-
-        const tdStrategy = document.createElement('td');
-        tdStrategy.style.cssText = 'padding:6px 16px';
-        const sel = document.createElement('select');
-        sel.className = 'strategy-sel';
-        const blankOpt = document.createElement('option');
-        blankOpt.value = '';
-        blankOpt.textContent = '—';
-        sel.appendChild(blankOpt);
-        for (const s of activeStrategies) {
-            const opt = document.createElement('option');
-            opt.value = s.name;
-            opt.textContent = s.name;
-            if (s.name === row.strategy) opt.selected = true;
-            sel.appendChild(opt);
-        }
-        sel.addEventListener('change', () => {
-            const target = tableData.find(r => r.courseIndex === row.courseIndex);
-            if (target) target.strategy = sel.value;
-        });
-        tdStrategy.appendChild(sel);
-
-        const tdLog = document.createElement('td');
-        tdLog.style.cssText = 'padding:10px 16px;text-align:center';
-        tdLog.innerHTML = `<a href="${escapeHtml(row.logUrl)}" target="_blank" rel="noopener" class="log-btn">
-            <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-                <path stroke-linecap="round" stroke-linejoin="round"
-                    d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/>
-            </svg>
-            View Logs
-        </a>`;
-
-        tr.append(tdNum, tdDate, tdUser, tdName, tdType, tdStrategy, tdLog);
-        frag.appendChild(tr);
-    });
     tbody.appendChild(frag);
-
-    const n = rows.length;
-    rowCountEl.textContent = `${n} ${n===1?'entry':'entries'}`;
+    rowCountEl.textContent = `${visibleIdx} ${visibleIdx === 1 ? 'entry' : 'entries'}`;
 }
 
 function updateTabUI() {
-    const tTeachers = document.getElementById('tabTeachers');
-    const tOer      = document.getElementById('tabOer');
-    const cTeachers = document.getElementById('countTeachers');
-    const cOer      = document.getElementById('countOer');
-
-    if (activeTab === 'teachers') {
-        tTeachers.style.color = '#0284c7';
-        tTeachers.style.borderBottom = '2px solid #0284c7';
-        cTeachers.style.background = '#e0f2fe';
-        cTeachers.style.color = '#0369a1';
-
-        tOer.style.color = '#94a3b8';
-        tOer.style.borderBottom = '2px solid transparent';
-        cOer.style.background = '#f1f5f9';
-        cOer.style.color = '#94a3b8';
-    } else {
-        tOer.style.color = '#0284c7';
-        tOer.style.borderBottom = '2px solid #0284c7';
-        cOer.style.background = '#e0f2fe';
-        cOer.style.color = '#0369a1';
-
-        tTeachers.style.color = '#94a3b8';
-        tTeachers.style.borderBottom = '2px solid transparent';
-        cTeachers.style.background = '#f1f5f9';
-        cTeachers.style.color = '#94a3b8';
-    }
-
-    const activeData = activeTab === 'teachers' ? teacherData : oerData;
-    setDownloadDisabled(downloadBtn, activeData.length === 0);
+    const tabs = [
+        { btn: 'tabAll',      count: 'countAll',      key: 'all'      },
+        { btn: 'tabTeachers', count: 'countTeachers', key: 'teachers' },
+        { btn: 'tabOer',      count: 'countOer',      key: 'oer'      },
+    ];
+    tabs.forEach(({ btn, count, key }) => {
+        const tEl = document.getElementById(btn);
+        const cEl = document.getElementById(count);
+        const on  = activeTab === key;
+        tEl.classList.toggle('tab-btn--active', on);
+        cEl.classList.toggle('tab-count--active', on);
+    });
+    setDownloadDisabled(downloadBtn, getActiveRows().length === 0);
 }
 
-function updateSortUI() {
-    const ids = { oldest:'sortOldest', newest:'sortNewest', course:'sortCourse' };
-    for (const [key, id] of Object.entries(ids)) {
-        const btn = document.getElementById(id);
-        btn.className = 'px-4 py-1.5 text-xs font-semibold transition-colors';
-        if (key === sortMode) {
-            btn.style.backgroundColor = '#0369a1';
-            btn.style.color = '#ffffff';
+function updateHeaderSortUI() {
+    document.querySelectorAll('thead th[data-sort]').forEach(th => {
+        const col = th.dataset.sort;
+        const ind = th.querySelector('.sort-ind');
+        if (!ind) return;
+        if (col === sortCol) {
+            ind.textContent = sortDir === 'asc' ? ' ↑' : ' ↓';
+            ind.style.opacity = '1';
         } else {
-            btn.style.backgroundColor = 'transparent';
-            btn.style.color = '#475569';
+            ind.textContent = ' ⇅';
+            ind.style.opacity = '0.35';
         }
+    });
+}
+
+function applyAndRender() {
+    const sorted = applyHeaderSort(getActiveRows());
+    let rows = hiddenTypes.size > 0 ? sorted.filter(r => !hiddenTypes.has(r.activityType)) : sorted;
+    if (hiddenYears.size > 0 || hiddenMonths.size > 0) {
+        rows = rows.filter(r => {
+            const parts = (r.date || '').split('/');
+            if (parts.length !== 3) return true;
+            const [mm, , yyyy] = parts;
+            return !hiddenYears.has(yyyy) && !hiddenMonths.has(mm);
+        });
     }
+    renderTable(rows);
+    updateTabUI();
+    updateHeaderSortUI();
+    updateFilterUI();
+    updateDateFilterUI();
 }
 
 function renderActiveTab() {
-    const rows = applySort(getActiveRows());
-    renderTable(rows);
-    updateTabUI();
-    updateSortUI();
+    closeFilterDropdown();
+    closeDateFilterDropdown();
+    applyAndRender();
+}
+
+function updateFilterUI() {
+    const icon = document.getElementById('typeFilterIcon');
+    if (icon) icon.classList.toggle('filter-active', hiddenTypes.size > 0);
+}
+
+function updateDateFilterUI() {
+    const icon = document.getElementById('dateFilterIcon');
+    if (icon) icon.classList.toggle('filter-active', hiddenYears.size > 0 || hiddenMonths.size > 0);
+}
+
+function closeFilterDropdown() {
+    if (filterDropdown) { filterDropdown.remove(); filterDropdown = null; }
+}
+
+function closeDateFilterDropdown() {
+    if (dateFilterDropdown) { dateFilterDropdown.remove(); dateFilterDropdown = null; }
+}
+
+// ── Heatmap modal ─────────────────────────────────────────────────────────────
+
+function openHeatmapModal(targetGroupIndex = null) {
+    if (!courseRegistry.length) return;
+
+    // Row data per course comes from currentRows (respects active tab + filters)
+    const rowsByGroup = new Map();
+    currentRows.forEach(r => {
+        if (!rowsByGroup.has(r.courseGroupIndex)) rowsByGroup.set(r.courseGroupIndex, []);
+        rowsByGroup.get(r.courseGroupIndex).push(r);
+    });
+
+    heatmapCourses = courseRegistry.map(g => ({
+        courseName: g.courseName,
+        rows: rowsByGroup.get(g.courseGroupIndex) || []
+    }));
+
+    heatmapCourseSelect.innerHTML = '';
+    heatmapCourses.forEach((c, i) => {
+        const opt = document.createElement('option');
+        opt.value = i;
+        opt.textContent = c.courseName || `Course ${i + 1}`;
+        heatmapCourseSelect.appendChild(opt);
+    });
+
+    let startIdx = 0;
+    if (targetGroupIndex !== null) {
+        const found = courseRegistry.findIndex(g => g.courseGroupIndex === targetGroupIndex);
+        if (found >= 0) startIdx = found;
+    }
+
+    renderHeatmapForCourse(startIdx);
+    heatmapModal.style.display = 'flex';
+}
+
+function closeHeatmapModal() {
+    heatmapModal.style.display = 'none';
+}
+
+function renderHeatmapForCourse(idx) {
+    heatmapCourseIdx = idx;
+    heatmapCourseSelect.value = idx;
+
+    const { rows } = heatmapCourses[idx];
+
+    heatmapContent.innerHTML = '';
+    if (!rows.length) {
+        const msg = document.createElement('div');
+        msg.className = 'hm-empty-state';
+        msg.textContent = 'No data available for this course.';
+        heatmapContent.appendChild(msg);
+        updateHeatmapNav();
+        return;
+    }
+
+    // Build day-rows map: 'YYYY-MM-DD' → [row, ...]
+    const dayRowsMap = {};
+    rows.forEach(r => {
+        if (!r.rawTs) return;
+        const d   = new Date(r.rawTs * 1000);
+        const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+        if (!dayRowsMap[key]) dayRowsMap[key] = [];
+        dayRowsMap[key].push(r);
+    });
+
+    // Unique years with data, newest first
+    const years = [...new Set(Object.keys(dayRowsMap).map(k => parseInt(k)))].sort((a, b) => b - a);
+
+    years.forEach(year => heatmapContent.appendChild(buildHeatmapYearSection(year, dayRowsMap)));
+    heatmapContent.appendChild(buildHeatmapLegend());
+    updateHeatmapNav();
+}
+
+function buildHeatmapYearSection(year, dayRowsMap) {
+    const today = new Date(); today.setHours(23, 59, 59, 999);
+    const DOW   = ['S', 'M', 'T', 'W', 'T', 'F', 'S'];
+
+    const section = document.createElement('div');
+    section.className = 'hm-year-section';
+
+    const yearLbl = document.createElement('div');
+    yearLbl.className = 'hm-year-label';
+    yearLbl.textContent = year;
+    section.appendChild(yearLbl);
+
+    const calGrid = document.createElement('div');
+    calGrid.className = 'hm-cal-grid';
+
+    for (let m = 0; m < 12; m++) {
+        const card = document.createElement('div');
+        card.className = 'hm-month-card';
+
+        const monthName = document.createElement('div');
+        monthName.className = 'hm-cal-month-name';
+        monthName.textContent = MONTH_SHORT[m];
+
+        // Count entries for this month
+        const monthPrefix = `${year}-${String(m + 1).padStart(2, '0')}-`;
+        const monthCount  = Object.keys(dayRowsMap)
+            .filter(k => k.startsWith(monthPrefix))
+            .reduce((sum, k) => sum + dayRowsMap[k].length, 0);
+        if (monthCount > 0) {
+            const label = `${monthCount} module${monthCount === 1 ? '' : 's'} in ${MONTH_NAMES[m]}`;
+            monthName.addEventListener('mouseenter', () => showHmTooltipSimple(monthName, label));
+            monthName.addEventListener('mouseleave', hideHmTooltip);
+        }
+
+        card.appendChild(monthName);
+
+        const dowRow = document.createElement('div');
+        dowRow.className = 'hm-cal-dow-row';
+        DOW.forEach(lbl => {
+            const el = document.createElement('div');
+            el.className = 'hm-cal-dow-label';
+            el.textContent = lbl;
+            dowRow.appendChild(el);
+        });
+        card.appendChild(dowRow);
+
+        const daysGrid = document.createElement('div');
+        daysGrid.className = 'hm-cal-days-grid';
+
+        const firstDow    = new Date(year, m, 1).getDay();   // 0=Sun
+        const daysInMonth = new Date(year, m + 1, 0).getDate();
+        const totalCells  = Math.ceil((firstDow + daysInMonth) / 7) * 7;
+
+        for (let i = 0; i < totalCells; i++) {
+            const dayNum = i - firstDow + 1;
+            const cell   = document.createElement('div');
+
+            if (dayNum < 1 || dayNum > daysInMonth) {
+                cell.className = 'hm-cal-day hm-cal-day--empty';
+            } else {
+                const d        = new Date(year, m, dayNum);
+                const isFuture = d > today;
+                const key      = `${year}-${String(m + 1).padStart(2, '0')}-${String(dayNum).padStart(2, '0')}`;
+                const cellRows = dayRowsMap[key] || [];
+                const count    = cellRows.length;
+                const level    = count === 0 ? 0 : count <= 3 ? 1 : count <= 6 ? 2 : count <= 10 ? 3 : 4;
+
+                cell.className = isFuture
+                    ? 'hm-cal-day hm-cal-day--future'
+                    : `hm-cal-day hm-level-${level}`;
+
+                const numEl = document.createElement('span');
+                numEl.className = 'hm-cal-day-num';
+                numEl.textContent = dayNum;
+                cell.appendChild(numEl);
+
+                if (!isFuture && count > 0) {
+                    const dateStr = `${MONTH_NAMES[m]} ${dayNum}, ${year}`;
+                    cell.addEventListener('mouseenter', () => showHmTooltip(cell, cellRows, dateStr));
+                    cell.addEventListener('mouseleave', hideHmTooltip);
+                }
+            }
+
+            daysGrid.appendChild(cell);
+        }
+
+        card.appendChild(daysGrid);
+        calGrid.appendChild(card);
+    }
+
+    section.appendChild(calGrid);
+    return section;
+}
+
+function buildHeatmapLegend() {
+    const legend = document.createElement('div');
+    legend.className = 'hm-legend';
+
+    const less = document.createElement('span');
+    less.className = 'hm-legend-label';
+    less.textContent = 'Less';
+    legend.appendChild(less);
+
+    [0, 1, 2, 3, 4].forEach(level => {
+        const cell = document.createElement('div');
+        cell.className = `hm-legend-cell hm-level-${level}`;
+        legend.appendChild(cell);
+    });
+
+    const more = document.createElement('span');
+    more.className = 'hm-legend-label';
+    more.textContent = 'More';
+    legend.appendChild(more);
+
+    return legend;
+}
+
+function showHmTooltip(cell, rows, dateStr) {
+    clearTimeout(hmTooltipHideTimer);
+    if (!hmTooltip) return;
+
+    hmTooltip.querySelector('.hm-tooltip-header').textContent =
+        `${rows.length} module${rows.length === 1 ? '' : 's'} on ${dateStr}`;
+
+    const list = hmTooltip.querySelector('.hm-tooltip-list');
+    list.innerHTML = '';
+    const MAX = 10;
+    rows.slice(0, MAX).forEach(r => {
+        const li = document.createElement('li');
+        if (r.activityUrl) {
+            const a = document.createElement('a');
+            a.href        = r.activityUrl;
+            a.target      = '_blank';
+            a.rel         = 'noopener';
+            a.className   = 'hm-tooltip-link';
+            a.textContent = r.activityName;
+            li.appendChild(a);
+        } else {
+            li.className   = 'hm-tooltip-item';
+            li.textContent = r.activityName;
+        }
+        list.appendChild(li);
+    });
+    if (rows.length > MAX) {
+        const more = document.createElement('li');
+        more.className   = 'hm-tooltip-more';
+        more.textContent = `+${rows.length - MAX} more`;
+        list.appendChild(more);
+    }
+
+    hmTooltip.style.display = 'block';
+
+    const rect = cell.getBoundingClientRect();
+    const ttW  = hmTooltip.offsetWidth  || 220;
+    const ttH  = hmTooltip.offsetHeight || 120;
+
+    let left = rect.right + 8;
+    let top  = rect.top;
+
+    if (left + ttW > window.innerWidth  - 8) left = rect.left  - ttW - 8;
+    if (top  + ttH > window.innerHeight - 8) top  = window.innerHeight - ttH - 8;
+    if (top < 8) top = 8;
+
+    hmTooltip.style.left = left + 'px';
+    hmTooltip.style.top  = top  + 'px';
+}
+
+function showHmTooltipSimple(el, text) {
+    clearTimeout(hmTooltipHideTimer);
+    if (!hmTooltip) return;
+
+    hmTooltip.querySelector('.hm-tooltip-header').textContent = text;
+    hmTooltip.querySelector('.hm-tooltip-list').innerHTML = '';
+
+    hmTooltip.style.display = 'block';
+
+    const rect = el.getBoundingClientRect();
+    const ttW  = hmTooltip.offsetWidth  || 200;
+    const ttH  = hmTooltip.offsetHeight || 36;
+
+    let left = rect.right + 8;
+    let top  = rect.top;
+
+    if (left + ttW > window.innerWidth  - 8) left = rect.left  - ttW - 8;
+    if (top  + ttH > window.innerHeight - 8) top  = window.innerHeight - ttH - 8;
+    if (top < 8) top = 8;
+
+    hmTooltip.style.left = left + 'px';
+    hmTooltip.style.top  = top  + 'px';
+}
+
+function hideHmTooltip() {
+    hmTooltipHideTimer = setTimeout(() => {
+        if (hmTooltip) hmTooltip.style.display = 'none';
+    }, 120);
+}
+
+function updateHeatmapNav() {
+    const idx   = heatmapCourseIdx;
+    const total = heatmapCourses.length;
+    const hasPrev = idx > 0;
+    const hasNext = idx < total - 1;
+
+    heatmapPrevBtn.style.visibility = hasPrev ? 'visible' : 'hidden';
+    heatmapNextBtn.style.visibility = hasNext ? 'visible' : 'hidden';
+
+    if (hasPrev) heatmapPrevBtn.innerHTML = `<img src="src/icons/chevron-left.svg" width="13" height="13" class="icon-img" style="flex-shrink:0" alt=""><span class="hm-nav-label">${escapeHtml(heatmapCourses[idx - 1].courseName)}</span>`;
+    if (hasNext) heatmapNextBtn.innerHTML = `<span class="hm-nav-label">${escapeHtml(heatmapCourses[idx + 1].courseName)}</span><img src="src/icons/chevron-right.svg" width="13" height="13" class="icon-img" style="flex-shrink:0" alt="">`;
+}
+
+function toggleFilterDropdown(anchor) {
+    if (filterDropdown) { closeFilterDropdown(); return; }
+
+    const rows  = getActiveRows();
+    const types = [...new Set(rows.map(r => r.activityType))].sort();
+    if (!types.length) return;
+
+    const dd = document.createElement('div');
+    dd.className = 'filter-dropdown';
+
+    const hdr = document.createElement('div');
+    hdr.className = 'filter-dropdown-header';
+    const hdrText  = document.createElement('span');
+    hdrText.textContent = 'Filter by Type';
+    const resetBtn = document.createElement('button');
+    resetBtn.textContent = 'Show all';
+    resetBtn.className = 'filter-reset-btn';
+    resetBtn.addEventListener('click', e => {
+        e.stopPropagation();
+        hiddenTypes.clear();
+        dd.querySelectorAll('input[type=checkbox]').forEach(cb => { cb.checked = true; });
+        console.log('[filter] reset — showing all types');
+        applyAndRender();
+    });
+    hdr.append(hdrText, resetBtn);
+    dd.appendChild(hdr);
+
+    const list = document.createElement('div');
+    list.className = 'filter-dropdown-list';
+    types.forEach(type => {
+        const lbl = document.createElement('label');
+        lbl.className = 'filter-item';
+        const cb = document.createElement('input');
+        cb.type = 'checkbox';
+        cb.checked = !hiddenTypes.has(type);
+        cb.className = 'filter-checkbox';
+        cb.addEventListener('change', () => {
+            if (cb.checked) hiddenTypes.delete(type); else hiddenTypes.add(type);
+            console.log(`[filter] "${type}" ${cb.checked ? 'shown' : 'hidden'} — hiddenTypes size: ${hiddenTypes.size}`);
+            applyAndRender();
+        });
+        lbl.append(cb, document.createTextNode(type));
+        list.appendChild(lbl);
+    });
+    dd.appendChild(list);
+    dd.addEventListener('click', e => e.stopPropagation());
+    document.body.appendChild(dd);
+    filterDropdown = dd;
+
+    const rect = anchor.getBoundingClientRect();
+    dd.style.left = Math.min(rect.left, window.innerWidth - 230) + 'px';
+    dd.style.top  = (rect.bottom + 6) + 'px';
+
+    setTimeout(() => document.addEventListener('click', closeFilterDropdown, {once: true}), 0);
+}
+
+function toggleDateFilterDropdown(anchor) {
+    if (dateFilterDropdown) { closeDateFilterDropdown(); return; }
+
+    const rows = getActiveRows();
+    const yearSet  = new Set();
+    const monthSet = new Set();
+    rows.forEach(r => {
+        const parts = (r.date || '').split('/');
+        if (parts.length === 3) { monthSet.add(parts[0]); yearSet.add(parts[2]); }
+    });
+    const years  = [...yearSet].sort((a, b) => parseInt(b) - parseInt(a));
+    const months = [...monthSet].sort((a, b) => parseInt(a) - parseInt(b));
+    if (!years.length && !months.length) return;
+
+    const dd = document.createElement('div');
+    dd.className = 'filter-dropdown-date';
+
+    const hdr = document.createElement('div');
+    hdr.className = 'filter-dropdown-header';
+    const hdrText  = document.createElement('span');
+    hdrText.textContent = 'Filter by Date';
+    const clearBtn = document.createElement('button');
+    clearBtn.textContent = 'Show all';
+    clearBtn.className = 'filter-reset-btn';
+    clearBtn.addEventListener('click', e => {
+        e.stopPropagation();
+        hiddenYears.clear();
+        hiddenMonths.clear();
+        dd.querySelectorAll('input[type=checkbox]').forEach(cb => { cb.checked = true; });
+        applyAndRender();
+    });
+    hdr.append(hdrText, clearBtn);
+    dd.appendChild(hdr);
+
+    const list = document.createElement('div');
+    list.className = 'filter-dropdown-list-tall';
+
+    function addSection(title, items, hiddenSet, keyOf, labelOf) {
+        const sHdr = document.createElement('div');
+        sHdr.className = 'filter-section-header';
+        sHdr.textContent = title;
+        list.appendChild(sHdr);
+        items.forEach(item => {
+            const key = keyOf(item);
+            const lbl = document.createElement('label');
+            lbl.className = 'filter-item';
+            const cb = document.createElement('input');
+            cb.type    = 'checkbox';
+            cb.checked = !hiddenSet.has(key);
+            cb.className = 'filter-checkbox';
+            cb.addEventListener('change', () => {
+                if (cb.checked) hiddenSet.delete(key); else hiddenSet.add(key);
+                applyAndRender();
+            });
+            lbl.append(cb, document.createTextNode(labelOf(item)));
+            list.appendChild(lbl);
+        });
+    }
+
+    if (years.length)  addSection('Year',  years,  hiddenYears,  y => y, y => y);
+    if (months.length) addSection('Month', months, hiddenMonths, m => m, m => MONTH_NAMES[parseInt(m, 10) - 1] || m);
+
+    dd.appendChild(list);
+    dd.addEventListener('click', e => e.stopPropagation());
+    document.body.appendChild(dd);
+    dateFilterDropdown = dd;
+
+    const rect = anchor.getBoundingClientRect();
+    dd.style.left = Math.min(rect.left, window.innerWidth - 200) + 'px';
+    dd.style.top  = (rect.bottom + 6) + 'px';
+
+    setTimeout(() => document.addEventListener('click', closeDateFilterDropdown, { once: true }), 0);
 }
 
 function setDownloadDisabled(btn, off) {
@@ -581,13 +1208,13 @@ function setDownloadDisabled(btn, off) {
 }
 
 function updateTabCounts() {
+    document.getElementById('countAll').textContent      = allData.length;
     document.getElementById('countTeachers').textContent = teacherData.length;
     document.getElementById('countOer').textContent      = oerData.length;
-    const activeData = activeTab === 'teachers' ? teacherData : oerData;
-    setDownloadDisabled(downloadBtn, activeData.length === 0);
+    setDownloadDisabled(downloadBtn, getActiveRows().length === 0);
 }
 
-// ── CSV ──────────────────────────────────────────────────────────────────────
+// ── CSV ───────────────────────────────────────────────────────────────────────
 
 function coursePrefix(name) {
     const m = (name || '').match(/^(\d+)\s*-\s*/);
@@ -596,15 +1223,20 @@ function coursePrefix(name) {
 
 function exportCSV(rows, filename, label = '') {
     if (!rows.length) { setStatus('Nothing to export.', true); return; }
-    const prefix = coursePrefix(currentCourseName);
-    const hdr  = ['Date', 'Created By', 'Activity Name', 'Activity Type', 'Strategy'];
-    const body = rows.map(r => [
-        r.date,
-        r.fullname,
-        prefix + r.activityName,
-        r.activityType,
-        r.strategy || '',
-    ]);
+    const hdr  = ['Date', 'User', 'Activity Type', 'Activity Name', 'Subject', 'Strategy', 'Course Name', 'Activity URL'];
+    const body = rows.map(r => {
+        const prefix = coursePrefix(r.courseName);
+        return [
+            r.date,
+            r.fullname,
+            r.activityType,
+            prefix + r.activityName,
+            r.subject     || '',
+            r.strategy    || '',
+            r.courseName  || '',
+            r.activityUrl || '',
+        ];
+    });
     const csv = [hdr, ...body].map(r => r.map(c => `"${String(c).replace(/"/g, '""')}"`).join(',')).join('\n');
     const blob = new Blob(['﻿' + csv], {type: 'text/csv;charset=utf-8;'});
     const a = document.createElement('a');
@@ -614,7 +1246,42 @@ function exportCSV(rows, filename, label = '') {
     setStatus(`Exported ${rows.length} ${label} entries.`);
 }
 
+// ── Per-course processing ─────────────────────────────────────────────────────
+
+async function processCourse({ baseUrl, courseId }, token, sessionCookie, groupIndex, onProgress) {
+    const [courseName, sections, fallbackUser] = await Promise.all([
+        fetchCourseName(baseUrl, token, courseId),
+        apiFetch(baseUrl, token, 'core_course_get_contents', {courseid: String(courseId)}),
+        fetchFirstAccessor(baseUrl, token, courseId),
+    ]);
+    const subject = getSubject(courseName || '');
+    return buildRows(sections, baseUrl, courseId, sessionCookie, fallbackUser, courseName, subject, groupIndex, onProgress);
+}
+
+function resetTable() {
+    if (!snapshotAllData.length) return;
+    allData      = [...snapshotAllData];
+    teacherData  = [...snapshotTeacherData];
+    oerData      = [...snapshotOerData];
+    hiddenTypes  = new Set(snapshotHiddenTypes);
+    hiddenYears  = new Set(snapshotHiddenYears);
+    hiddenMonths = new Set(snapshotHiddenMonths);
+    sortCol      = null;
+    sortDir      = 'asc';
+    activeTab    = 'all';
+    updateTabCounts();
+    updateTabUI();
+    updateFilterUI();
+    updateDateFilterUI();
+    renderActiveTab();
+}
+
 // ── Event listeners ───────────────────────────────────────────────────────────
+
+document.getElementById('tabAll').addEventListener('click', () => {
+    activeTab = 'all';
+    renderActiveTab();
+});
 
 document.getElementById('tabTeachers').addEventListener('click', () => {
     activeTab = 'teachers';
@@ -626,30 +1293,34 @@ document.getElementById('tabOer').addEventListener('click', () => {
     renderActiveTab();
 });
 
-document.getElementById('sortOldest').addEventListener('click', () => {
-    sortMode = 'oldest';
-    renderActiveTab();
-});
+document.getElementById('resetBtn').addEventListener('click', resetTable);
 
-document.getElementById('sortNewest').addEventListener('click', () => {
-    sortMode = 'newest';
-    renderActiveTab();
-});
-
-document.getElementById('sortCourse').addEventListener('click', () => {
-    sortMode = 'course';
-    renderActiveTab();
-});
+heatmapBtn.addEventListener('click', openHeatmapModal);
+heatmapCloseBtn.addEventListener('click', closeHeatmapModal);
+heatmapModal.addEventListener('click', e => { if (e.target === heatmapModal) closeHeatmapModal(); });
+heatmapCourseSelect.addEventListener('change', () => renderHeatmapForCourse(+heatmapCourseSelect.value));
+heatmapPrevBtn.addEventListener('click', () => renderHeatmapForCourse(heatmapCourseIdx - 1));
+heatmapNextBtn.addEventListener('click', () => renderHeatmapForCourse(heatmapCourseIdx + 1));
+hmTooltip.addEventListener('mouseenter', () => clearTimeout(hmTooltipHideTimer));
+hmTooltip.addEventListener('mouseleave', hideHmTooltip);
 
 downloadBtn.addEventListener('click', () => {
-    if (activeTab === 'teachers') {
-        exportCSV(applySort(teacherData), `moodle_course_${currentCourseId}_teachers_creation.csv`, 'Teachers Creation');
-    } else {
-        exportCSV(applySort(oerData), `moodle_course_${currentCourseId}_oer.csv`, 'OER');
+    const sorted = applyHeaderSort(getActiveRows());
+    let rows = hiddenTypes.size > 0 ? sorted.filter(r => !hiddenTypes.has(r.activityType)) : sorted;
+    if (hiddenYears.size > 0 || hiddenMonths.size > 0) {
+        rows = rows.filter(r => {
+            const parts = (r.date || '').split('/');
+            if (parts.length !== 3) return true;
+            const [mm, , yyyy] = parts;
+            return !hiddenYears.has(yyyy) && !hiddenMonths.has(mm);
+        });
     }
+    if (!rows.length) { setStatus('No rows to export. Please adjust your filter.', true); return; }
+    const label   = activeTab === 'oer' ? 'OER' : activeTab === 'all' ? 'All Activities' : 'Teachers Creation';
+    const prefix  = activeTab === 'oer' ? 'OER' : activeTab === 'all' ? 'ALL' : 'TC';
+    const ids     = [...new Set(rows.map(r => r.courseId))].join('-');
+    exportCSV(rows, `${prefix}_${ids}.csv`, label);
 });
-
-// ── Main ─────────────────────────────────────────────────────────────────────
 
 window.addEventListener('strategies-updated', async () => {
     await loadStrategies();
@@ -659,81 +1330,236 @@ window.addEventListener('strategies-updated', async () => {
     }
 });
 
-document.addEventListener('DOMContentLoaded', async () => {
-    await loadStrategies();
+window.addEventListener('subjects-updated', async () => {
+    await loadSubjects();
+    if (tableData.length > 0) {
+        tableData.forEach(r => { r.subject = getSubject(r.courseName || ''); });
+        renderActiveTab();
+    }
 });
 
-document.getElementById('fetchBtn').addEventListener('click', async () => {
-    const courseUrlRaw  = document.getElementById('courseUrl').value.trim();
+document.addEventListener('DOMContentLoaded', async () => {
+    await Promise.all([loadStrategies(), loadSubjects()]);
+
+    // Activity type filter icon
+    const typeFilterIcon = document.getElementById('typeFilterIcon');
+    if (typeFilterIcon) {
+        typeFilterIcon.addEventListener('click', e => {
+            e.stopPropagation();
+            toggleFilterDropdown(typeFilterIcon);
+        });
+    }
+
+    // Date filter icon
+    const dateFilterIcon = document.getElementById('dateFilterIcon');
+    if (dateFilterIcon) {
+        dateFilterIcon.addEventListener('click', e => {
+            e.stopPropagation();
+            toggleDateFilterDropdown(dateFilterIcon);
+        });
+    }
+
+    // Header click sort
+    document.querySelectorAll('thead th[data-sort]').forEach(th => {
+        th.style.cursor = 'pointer';
+        th.title = 'Click to sort';
+        th.addEventListener('click', () => {
+            const col = th.dataset.sort;
+            if (sortCol === col) {
+                sortDir = sortDir === 'asc' ? 'desc' : 'asc';
+                if (sortDir === 'asc' && col === sortCol) {
+                    // third-click reset handled by toggling back to asc on second click
+                }
+            } else {
+                sortCol = col;
+                sortDir = 'asc';
+            }
+            renderActiveTab();
+        });
+    });
+});
+
+function showDuplicateModal(dupUrls) {
+    dupUrlList.innerHTML = '';
+    dupUrls.forEach(u => {
+        const li = document.createElement('li');
+        li.textContent = u;
+        dupUrlList.appendChild(li);
+    });
+    dupUrlModal.style.display = 'flex';
+    return new Promise(resolve => {
+        function cleanup() {
+            dupUrlModal.style.display = 'none';
+            dupUrlConfirmBtn.removeEventListener('click', onConfirm);
+            dupUrlCancelBtn.removeEventListener('click', onCancel);
+            dupUrlModal.removeEventListener('click', onBackdrop);
+        }
+        function onConfirm()   { cleanup(); resolve(true); }
+        function onCancel()    { cleanup(); resolve(false); }
+        function onBackdrop(e) { if (e.target === dupUrlModal) { cleanup(); resolve(false); } }
+        dupUrlConfirmBtn.addEventListener('click', onConfirm);
+        dupUrlCancelBtn.addEventListener('click', onCancel);
+        dupUrlModal.addEventListener('click', onBackdrop);
+    });
+}
+
+fetchBtn.addEventListener('click', async () => {
+    const urlsRaw       = document.getElementById('courseUrl').value;
     const token         = document.getElementById('wsToken').value.trim();
     const sessionCookie = document.getElementById('sessionKey').value.trim();
 
-    if (!courseUrlRaw) { setStatus('Please enter the Moodle course URL.', true); return; }
-    if (!token)        { setStatus('Web service token is required.', true); return; }
+    let urls = urlsRaw.split('\n').map(u => u.trim()).filter(Boolean);
+    if (!urls.length) { setStatus('Please enter at least one course URL.', true); return; }
+    if (!token)       { setStatus('Web service token is required.', true); return; }
 
-    await loadStrategies();
-
-    let baseUrl, courseId;
-    try {
-        const parsed      = new URL(courseUrlRaw);
-        const courseIdx   = parsed.pathname.indexOf('/course/');
-        const basePath    = courseIdx > 0 ? parsed.pathname.slice(0, courseIdx) : '';
-        baseUrl  = parsed.origin + basePath;
-        courseId = parseInt(parsed.searchParams.get('id'), 10);
-    } catch (_) {
-        setStatus('Invalid URL — paste the full course URL, e.g. https://yourmoodle.edu/course/view.php?id=2', true);
-        return;
+    // Detect duplicate URLs (trim + strip trailing slash for comparison)
+    const normUrl   = u => u.replace(/\/+$/, '');
+    const seenUrls  = new Map();
+    const dupUrls   = [];
+    const dedupedUrls = [];
+    for (const u of urls) {
+        const key = normUrl(u);
+        if (seenUrls.has(key)) { dupUrls.push(u); }
+        else { seenUrls.set(key, u); dedupedUrls.push(u); }
     }
-    if (isNaN(courseId) || courseId <= 0) {
-        setStatus('Course ID not found in URL — make sure it contains ?id=…', true);
-        return;
+    if (dupUrls.length) {
+        const ok = await showDuplicateModal(dupUrls);
+        if (!ok) return;
+        document.getElementById('courseUrl').value = dedupedUrls.join('\n');
+        urls = dedupedUrls;
     }
 
-    currentCourseId = courseId;
+    // Validate all URLs before fetching any
+    const courseEntries = [];
+    for (const urlRaw of urls) {
+        try {
+            const parsed    = new URL(urlRaw);
+            const courseIdx = parsed.pathname.indexOf('/course/');
+            const basePath  = courseIdx > 0 ? parsed.pathname.slice(0, courseIdx) : '';
+            const baseUrl   = parsed.origin + basePath;
+            const courseId  = parseInt(parsed.searchParams.get('id'), 10);
+            if (isNaN(courseId) || courseId <= 0) throw new Error('no id');
+            courseEntries.push({ baseUrl, courseId });
+        } catch {
+            setStatus(`Invalid URL: ${urlRaw}`, true);
+            return;
+        }
+    }
 
+    // Reset
+    tableData      = [];
+    allData        = [];
+    teacherData    = [];
+    oerData        = [];
+    courseRegistry = [];
+    document.getElementById('countAll').textContent      = '0';
+    document.getElementById('countTeachers').textContent = '0';
+    document.getElementById('countOer').textContent      = '0';
+    sortCol     = null;
+    sortDir     = 'asc';
+    closeFilterDropdown();
+    closeDateFilterDropdown();
     document.getElementById('corsNotice').style.display = 'none';
-    tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;padding:64px 20px;color:#94a3b8;font-size:13px;font-style:italic">Loading…</td></tr>';
+    tbody.innerHTML = `<tr><td colspan="8" class="empty-state-cell">Loading…</td></tr>`;
     rowCountEl.textContent = 'loading…';
     setDownloadDisabled(downloadBtn, true);
+    setDownloadDisabled(heatmapBtn, true);
     document.getElementById('courseNameSection').style.display = 'none';
-    tableData   = [];
-    teacherData = [];
-    oerData     = [];
-    setStatus('Fetching course contents…');
+    setStatus(`Processing ${courseEntries.length} course(s)…`);
+
+    await Promise.all([loadStrategies(), loadSubjects()]);
+    setBtnLoading('Fetching course structure…');
 
     try {
-        const [courseName, sections, fallbackUser] = await Promise.all([
-            fetchCourseName(baseUrl, token, courseId),
-            apiFetch(baseUrl, token, 'core_course_get_contents', {courseid: String(courseId)}),
-            fetchFirstAccessor(baseUrl, token, courseId),
-        ]);
+        const N = courseEntries.length;
 
-        currentCourseName = courseName || '';
-        const nameEl = document.getElementById('courseNameDisplay');
-        nameEl.textContent = courseName || `Course ID: ${courseId}`;
-        nameEl.href = `${baseUrl}/course/view.php?id=${courseId}`;
-        document.getElementById('courseNameSection').style.display = 'block';
+        // Phase 1 — fetch all course metadata in parallel (fast API calls)
+        const metaList = await Promise.all(courseEntries.map(async entry => {
+            const [courseName, sections, fallbackUser] = await Promise.all([
+                fetchCourseName(entry.baseUrl, token, entry.courseId),
+                apiFetch(entry.baseUrl, token, 'core_course_get_contents', {courseid: String(entry.courseId)}),
+                fetchFirstAccessor(entry.baseUrl, token, entry.courseId),
+            ]);
+            return { ...entry, courseName, sections, fallbackUser };
+        }));
 
-        const total = sections.reduce((n, s) => n + (s.modules?.length || 0), 0);
-        setStatus(`Found ${total} module(s). Reading log pages…`);
+        courseRegistry = metaList.map((m, i) => ({
+            courseGroupIndex: i,
+            courseId:         m.courseId,
+            courseName:       m.courseName || `Course ${m.courseId}`,
+            courseBaseUrl:    m.baseUrl,
+        }));
+        const modCounts  = metaList.map(m => m.sections.flatMap(s => s.modules || []).length);
+        const totalMods  = modCounts.reduce((a, b) => a + b, 0);
+        let   globalDone = 0;
 
-        tableData   = await buildRows(sections, token, baseUrl, courseId, sessionCookie, fallbackUser);
+        // Phase 2 — fetch logs sequentially with smooth global progress bar
+        const allRows = [];
+        for (let i = 0; i < N; i++) {
+            const { baseUrl, courseId, courseName, sections, fallbackUser } = metaList[i];
+            const subject      = getSubject(courseName || '');
+            const courseModCnt = modCounts[i];
+
+            setStatus(`Course ${i + 1} / ${N} — fetching logs for "${courseName || courseId}"…`);
+            const rows = await buildRows(
+                sections, baseUrl, courseId, sessionCookie, fallbackUser,
+                courseName, subject, i,
+                (frac, label) => {
+                    const globalFrac = totalMods > 0
+                        ? (globalDone + frac * modCounts[i]) / totalMods
+                        : (i + frac) / N;
+                    setBtnLoading(`Course ${i + 1}/${N}: ${label}`, globalFrac);
+                }
+            );
+            globalDone += courseModCnt;
+            allRows.push(...rows);
+        }
+
+        tableData   = allRows.filter(r => !isExcludedRow(r));
+        deduplicateActivityNames(tableData);
+        allData     = [...tableData];
         teacherData = tableData.filter(r => r.modname !== 'url');
         oerData     = tableData.filter(r => r.modname === 'url');
 
+        // Default type filter: hide "Text and Media Area" if present in data
+        hiddenTypes  = new Set();
+        hiddenYears  = new Set();
+        hiddenMonths = new Set();
+        if (new Set(tableData.map(r => r.activityType)).has('Text and Media Area')) {
+            hiddenTypes.add('Text and Media Area');
+        }
+
+        // Snapshot for Reset Table
+        snapshotAllData      = [...allData];
+        snapshotTeacherData  = [...teacherData];
+        snapshotOerData      = [...oerData];
+        snapshotHiddenTypes  = new Set(hiddenTypes);
+        snapshotHiddenYears  = new Set(hiddenYears);
+        snapshotHiddenMonths = new Set(hiddenMonths);
+
+        if (N === 1 && allRows.length > 0) {
+            const nameEl = document.getElementById('courseNameDisplay');
+            nameEl.textContent = allRows[0].courseName || `Course ${courseEntries[0].courseId}`;
+            nameEl.href = `${courseEntries[0].baseUrl}/course/view.php?id=${courseEntries[0].courseId}`;
+            document.getElementById('courseNameSection').style.display = 'block';
+        }
+
         const logCount = tableData.filter(r => r.fromLog).length;
-        setStatus(`Done. ${tableData.length} module(s) — ${logCount} with real log date & creator, ${tableData.length - logCount} estimated.`);
+        setStatus(`Done. ${tableData.length} module(s) across ${N} course(s) — ${logCount} with confirmed log date.`);
+        setBtnSuccess('✓ Done');
+        setDownloadDisabled(heatmapBtn, courseRegistry.length === 0);
 
         updateTabCounts();
-        activeTab = 'teachers';
+        activeTab = 'all';
         renderActiveTab();
 
     } catch (err) {
         console.error(err);
         let msg = err.message;
         if (msg.includes('Invalid token') || msg.includes('Access control')) msg = 'Invalid token or insufficient permissions.';
-        else if (msg.includes('Course not found')) msg = `Course ID ${courseId} not found.`;
+        else if (msg.includes('Course not found')) msg = 'Course not found — check the course ID.';
         setStatus(msg, true);
-        tbody.innerHTML = `<tr><td colspan="7" style="text-align:center;padding:64px 20px;color:#ef4444;font-size:13px;font-style:italic">${escapeHtml(msg)}</td></tr>`;
+        setBtnError('✗ Failed');
+        tbody.innerHTML = `<tr><td colspan="8" class="empty-state-cell" style="color:#ef4444">${escapeHtml(msg)}</td></tr>`;
     }
 });
