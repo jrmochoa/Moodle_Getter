@@ -1,4 +1,6 @@
 @import "tailwindcss";
+@source "../index.html";
+@source "../app.js";
 
 /* ── Modal overlay ─────────────────────────────────────────────────────────── */
 .modal-overlay {
