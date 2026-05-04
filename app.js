@@ -54,14 +54,16 @@ function isLocal() {
            location.hostname === '127.0.0.1';
 }
 
+function proxyPath() {
+    return isLocal() ? `${PROXY_BASE}/proxy` : '/api/proxy';
+}
+
 function apiProxyUrl(targetUrl) {
-    const base = isLocal() ? PROXY_BASE : '';
-    return `${base}/proxy?url=${encodeURIComponent(targetUrl)}&accept=application%2Fjson`;
+    return `${proxyPath()}?url=${encodeURIComponent(targetUrl)}&accept=application%2Fjson`;
 }
 
 function htmlProxyUrl(targetUrl, cookie) {
-    const base = isLocal() ? PROXY_BASE : '';
-    let u = `${base}/proxy?url=${encodeURIComponent(targetUrl)}&accept=text%2Fhtml`;
+    let u = `${proxyPath()}?url=${encodeURIComponent(targetUrl)}&accept=text%2Fhtml`;
     if (cookie) u += `&cookie=${encodeURIComponent(cookie)}`;
     return u;
 }
@@ -132,7 +134,7 @@ const STRATEGIES = [
 
 async function loadStrategies() {
     try {
-        const res = await fetch('/strategies');
+        const res = await fetch(isLocal() ? '/strategies' : '/api/strategies');
         if (!res.ok) throw new Error();
         const data = await res.json();
         activeStrategies = data.strategies;
@@ -165,7 +167,7 @@ const DEFAULT_SUBJECTS = [
 
 async function loadSubjects() {
     try {
-        const res = await fetch('/subjects');
+        const res = await fetch(isLocal() ? '/subjects' : '/api/subjects');
         if (!res.ok) throw new Error();
         const data = await res.json();
         activeSubjects = data.subjects;

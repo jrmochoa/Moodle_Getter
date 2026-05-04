@@ -779,7 +779,8 @@ function strategyApp() {
     async save() {
       this.status = 'saving';
       try {
-        await fetch('/strategies', {
+        const isLocal = location.hostname === 'localhost' || location.hostname === '127.0.0.1';
+        await fetch(isLocal ? '/strategies' : '/api/strategies', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ strategies: this.strategies })
@@ -866,7 +867,8 @@ function subjectApp() {
     async save() {
       this.status = 'saving';
       try {
-        await fetch('/subjects', {
+        const isLocal = location.hostname === 'localhost' || location.hostname === '127.0.0.1';
+        await fetch(isLocal ? '/subjects' : '/api/subjects', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ subjects: this.subjects })
