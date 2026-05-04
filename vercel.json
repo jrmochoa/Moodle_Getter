@@ -1,4 +1,5 @@
 {
+  "buildCommand": "",
   "rewrites": [
     { "source": "/proxy",      "destination": "/api/proxy" },
     { "source": "/strategies", "destination": "/api/strategies" },
