@@ -393,12 +393,8 @@ body.light-mode .app-header {
     margin-top: 8px;
 }
 .results-card {
-    position: sticky;
-    top: 0;
-    height: 100vh;
     display: flex;
     flex-direction: column;
-    overflow: hidden;
     z-index: 2;
 }
 
@@ -593,7 +589,8 @@ body.light-mode .course-name-link { color: #1e1230; }
     flex-wrap: wrap;
     gap: 8px;
     flex-shrink: 0;
-    position: relative;
+    position: sticky;
+    top: 0;
     z-index: 3;
     background: #09011a;
 }
@@ -655,10 +652,7 @@ body.light-mode .tab-bar { background: #f8f5ff; }
 }
 
 .table-scroll-wrap {
-    overflow-x: auto;
-    overflow-y: auto;
-    flex: 1;
-    min-height: 0;
+    overflow-x: clip;
     scrollbar-width: thin;
     scrollbar-color: rgba(139,92,246,.25) transparent;
 }
@@ -670,19 +664,34 @@ body.light-mode .table-scroll-wrap { scrollbar-color: rgba(109,40,217,.3) transp
 body.light-mode .table-scroll-wrap::-webkit-scrollbar-thumb { background: rgba(109,40,217,.3); }
 body.light-mode .table-scroll-wrap::-webkit-scrollbar-thumb:hover { background: rgba(109,40,217,.5); }
 
+/* ── Scroll fade indicator ───────────────────────────────────────────────────── */
+.scroll-fade-bottom {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    height: 72px;
+    background: linear-gradient(to bottom, transparent, rgba(15,10,25,0.96));
+    transition: opacity 0.25s ease;
+    z-index: 10;
+    pointer-events: none;
+}
+.scroll-fade-bottom--hidden { opacity: 0; }
+body.light-mode .scroll-fade-bottom { background: linear-gradient(to bottom, transparent, rgba(249,245,255,0.97)); }
+
 /* ── Table ──────────────────────────────────────────────────────────────────── */
 .report-table {
     width: 100%;
-    border-collapse: collapse;
+    border-collapse: separate;
+    border-spacing: 0;
 }
 .table-head-row {
-    position: sticky;
-    top: 0;
-    z-index: 2;
     background: #09011a;
-    border-bottom: 1px solid rgba(139,92,246,.14);
 }
 body.light-mode .table-head-row { background: #f8f5ff; }
+body.light-mode .th-cell,
+body.light-mode .th-cell-nowrap,
+body.light-mode .th-cell-center { color: rgba(109,40,217,.75); background: #f8f5ff; }
 .th-cell {
     padding: 10px 16px;
     text-align: left;
@@ -691,6 +700,11 @@ body.light-mode .table-head-row { background: #f8f5ff; }
     text-transform: uppercase;
     letter-spacing: .07em;
     color: rgba(167,139,250,.55);
+    background: #09011a;
+    position: sticky;
+    top: var(--tab-bar-h, 48px);
+    z-index: 2;
+    border-bottom: 1px solid rgba(139,92,246,.14);
 }
 .th-cell-nowrap {
     padding: 10px 16px;
@@ -701,6 +715,11 @@ body.light-mode .table-head-row { background: #f8f5ff; }
     letter-spacing: .07em;
     color: rgba(167,139,250,.55);
     white-space: nowrap;
+    background: #09011a;
+    position: sticky;
+    top: var(--tab-bar-h, 48px);
+    z-index: 2;
+    border-bottom: 1px solid rgba(139,92,246,.14);
 }
 .th-cell-center {
     padding: 10px 16px;
@@ -711,6 +730,11 @@ body.light-mode .table-head-row { background: #f8f5ff; }
     letter-spacing: .07em;
     color: rgba(167,139,250,.55);
     white-space: nowrap;
+    background: #09011a;
+    position: sticky;
+    top: var(--tab-bar-h, 48px);
+    z-index: 2;
+    border-bottom: 1px solid rgba(139,92,246,.14);
 }
 .th-icon-muted {
     opacity: 0.55;
@@ -766,10 +790,20 @@ body.light-mode .table-head-row { background: #f8f5ff; }
 body.light-mode .course-empty-cell { color: rgba(30,18,48,.4); background: rgba(109,40,217,.02); }
 .course-sep-cell {
     padding: 5px 16px;
-    background: rgba(139,92,246,.07);
+    background: #120828;
     border-top: 1px solid rgba(139,92,246,.2);
     border-bottom: 1px solid rgba(139,92,246,.12);
 }
+.sticky-course-banner {
+    position: fixed;
+    top: var(--tab-bar-h, 48px);
+    z-index: 15;
+    padding: 5px 24px;
+    background: #120828;
+    border-bottom: 1px solid rgba(139,92,246,.2);
+}
+body.light-mode .sticky-course-banner { background: #f0ebff; }
+body.light-mode .course-sep-cell { background: #f0ebff; }
 .course-sep-inner {
     display: flex;
     align-items: center;

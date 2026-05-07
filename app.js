@@ -18,6 +18,12 @@ const heatmapContent      = document.getElementById('heatmapContent');
 const heatmapPrevBtn      = document.getElementById('heatmapPrevBtn');
 const heatmapNextBtn      = document.getElementById('heatmapNextBtn');
 const hmTooltip           = document.getElementById('hmTooltip');
+const scrollFadeBottom      = document.getElementById('scrollFadeBottom');
+const tableScrollWrap       = document.querySelector('.table-scroll-wrap');
+const tabBar                = document.querySelector('.tab-bar');
+const stickyCourseBanner    = document.getElementById('stickyCourseBanner');
+const stickyCourseLinkEl    = document.getElementById('stickyCourseBannerLink');
+const stickyHeatmapBtnEl    = document.getElementById('stickyHeatmapBtn');
 
 // ── State ─────────────────────────────────────────────────────────────────────
 let tableData            = [];
@@ -630,6 +636,32 @@ function buildDataRow(row, idx) {
     return tr;
 }
 
+function updateStickyCourseBanner() {
+    if (!stickyCourseBanner) return;
+    const tabBarRect = tabBar ? tabBar.getBoundingClientRect() : null;
+    if (!tabBarRect || tabBarRect.top > 2) { stickyCourseBanner.style.display = 'none'; return; }
+    const bannerTop = parseFloat(stickyCourseBanner.style.top) || tabBarRect.bottom;
+    const seps = Array.from(document.querySelectorAll('tr[data-sep-idx]'));
+    let active = null;
+    for (const sep of seps) {
+        if (sep.getBoundingClientRect().top < bannerTop) active = sep;
+    }
+    if (active) {
+        stickyCourseBanner.style.display = '';
+        stickyCourseLinkEl.href          = active.dataset.courseUrl || '#';
+        stickyCourseLinkEl.textContent   = active.dataset.courseName || '';
+        stickyHeatmapBtnEl.dataset.groupIdx = active.dataset.sepIdx;
+    } else {
+        stickyCourseBanner.style.display = 'none';
+    }
+}
+
+function updateScrollFade() {
+    if (!scrollFadeBottom || !tableScrollWrap) return;
+    const atBottom = tableScrollWrap.scrollTop + tableScrollWrap.clientHeight >= tableScrollWrap.scrollHeight - 8;
+    scrollFadeBottom.classList.toggle('scroll-fade-bottom--hidden', atBottom);
+}
+
 function renderTable(rows) {
     currentRows = rows || [];
     const NCOLS = 8; // #, Date, User, Activity Name, Activity Type, Subject, Strategy, Logs
@@ -664,6 +696,9 @@ function renderTable(rows) {
 
         courseGroups.forEach(cg => {
             const sepTr = document.createElement('tr');
+            sepTr.dataset.sepIdx     = String(cg.courseGroupIndex);
+            sepTr.dataset.courseUrl  = `${cg.courseBaseUrl}/course/view.php?id=${cg.courseId}`;
+            sepTr.dataset.courseName = cg.courseName;
             const sepTd = document.createElement('td');
             sepTd.colSpan = NCOLS;
             sepTd.className = 'course-sep-cell';
@@ -673,6 +708,8 @@ function renderTable(rows) {
             iconBtn.title = 'View activity heatmap';
             const iconImg = document.createElement('img');
             iconImg.src = 'src/icons/book-open-check.svg';
+            iconImg.width = 13;
+            iconImg.height = 13;
             iconImg.className = 'icon-img';
             iconImg.alt = '';
             iconBtn.appendChild(iconImg);
@@ -714,6 +751,9 @@ function renderTable(rows) {
 
     tbody.appendChild(frag);
     rowCountEl.textContent = `${visibleIdx} ${visibleIdx === 1 ? 'entry' : 'entries'}`;
+    requestAnimationFrame(updateScrollFade);
+    requestAnimationFrame(updateStickyCourseBanner);
+    requestAnimationFrame(setTabBarHeight);
 }
 
 function updateTabUI() {
@@ -1296,6 +1336,35 @@ document.getElementById('tabOer').addEventListener('click', () => {
 });
 
 document.getElementById('resetBtn').addEventListener('click', resetTable);
+
+if (tableScrollWrap) {
+    tableScrollWrap.addEventListener('scroll', updateScrollFade, { passive: true });
+    tableScrollWrap.addEventListener('scroll', updateStickyCourseBanner, { passive: true });
+}
+window.addEventListener('scroll', updateStickyCourseBanner, { passive: true });
+if (stickyHeatmapBtnEl) stickyHeatmapBtnEl.addEventListener('click', e => {
+    e.preventDefault();
+    e.stopPropagation();
+    const idx = parseInt(stickyHeatmapBtnEl.dataset.groupIdx, 10);
+    if (!isNaN(idx)) openHeatmapModal(idx);
+});
+
+function setTabBarHeight() {
+    const tbH = tabBar ? tabBar.getBoundingClientRect().height : 0;
+    if (tabBar) document.documentElement.style.setProperty('--tab-bar-h', tbH + 'px');
+    if (stickyCourseBanner) {
+        const thead = document.querySelector('.report-table thead');
+        const thH = thead ? thead.getBoundingClientRect().height : 0;
+        stickyCourseBanner.style.top = (tbH + thH) + 'px';
+        if (tableScrollWrap) {
+            const rect = tableScrollWrap.getBoundingClientRect();
+            stickyCourseBanner.style.left  = rect.left + 'px';
+            stickyCourseBanner.style.width = rect.width + 'px';
+        }
+    }
+}
+setTabBarHeight();
+window.addEventListener('resize', setTabBarHeight);
 
 heatmapBtn.addEventListener('click', openHeatmapModal);
 heatmapCloseBtn.addEventListener('click', closeHeatmapModal);

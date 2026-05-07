@@ -550,6 +550,19 @@
 
     </div>
 
+    <!-- Scroll-more fade indicator (fixed overlay — must be outside overflow:clip card) -->
+    <div id="scrollFadeBottom" class="scroll-fade-bottom" style="pointer-events:none"></div>
+
+    <!-- Sticky current-course banner (fixed overlay — must be outside overflow:clip card) -->
+    <div id="stickyCourseBanner" class="sticky-course-banner" style="display:none">
+        <div class="course-sep-inner">
+            <button id="stickyHeatmapBtn" class="tech-btn btn-icon-only course-sep-heatmap-btn" title="View activity heatmap">
+                <img src="src/icons/book-open-check.svg" width="13" height="13" class="icon-img" alt="">
+            </button>
+            <a id="stickyCourseBannerLink" class="course-sep-link" href="#" target="_blank" rel="noopener"></a>
+        </div>
+    </div>
+
 </main>
 
 <!-- ── Alpine component ───────────────────────────────────────────────────────── -->
