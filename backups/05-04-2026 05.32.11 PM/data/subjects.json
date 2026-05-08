@@ -1,0 +1,11 @@
+[
+  { "name": "Christian Living and Values Education", "keywords": ["Christian Living", "Values Education", "CLE"], "isDefault": true },
+  { "name": "Computer", "keywords": ["Computer", "ICT", "Programming"], "isDefault": true },
+  { "name": "English", "keywords": ["English", "Reading"], "isDefault": true },
+  { "name": "Filipino", "keywords": ["Filipino", "Tagalog"], "isDefault": true },
+  { "name": "MAPEH", "keywords": ["MAPEH", "Music", "Arts", "PE", "Health"], "isDefault": true },
+  { "name": "Mathematics", "keywords": ["Math", "Mathematics", "Algebra", "Geometry"], "isDefault": true },
+  { "name": "Science", "keywords": ["Science", "Physics", "Chemistry", "Biology"], "isDefault": true },
+  { "name": "Social Studies", "keywords": ["Social Studies", "History", "Geography"], "isDefault": true },
+  { "name": "TLE", "keywords": ["TLE", "Technology", "Livelihood"], "isDefault": true }
+]

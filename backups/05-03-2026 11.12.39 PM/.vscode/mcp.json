@@ -1,0 +1,8 @@
+{
+  "servers": {
+    "claude-mem": {
+      "command": "npx",
+      "args": ["-y", "@thedotmack/claude-mem"]
+    }
+  }
+}

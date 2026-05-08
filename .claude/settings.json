@@ -1,4 +1,5 @@
 {
+  "allowBypassPermissionsMode": true,
   "hooks": {
     "Stop": [
       {

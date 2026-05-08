@@ -1,0 +1,16 @@
+{
+  "version": 2,
+  "builds": [
+    { "src": "api/proxy.js",      "use": "@vercel/node" },
+    { "src": "api/strategies.js", "use": "@vercel/node" },
+    { "src": "api/subjects.js",   "use": "@vercel/node" },
+    { "src": "package.json",      "use": "@vercel/static-build", "config": { "distDir": "." } }
+  ],
+  "routes": [
+    { "src": "/api/proxy",      "dest": "/api/proxy.js" },
+    { "src": "/api/strategies", "dest": "/api/strategies.js" },
+    { "src": "/api/subjects",   "dest": "/api/subjects.js" },
+    { "src": "/",               "dest": "/index.html" },
+    { "src": "/(.*)",           "dest": "/$1" }
+  ]
+}

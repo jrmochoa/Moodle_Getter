@@ -1,0 +1,821 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+    <meta http-equiv="Content-Security-Policy" content="frame-ancestors 'none'">
+    <title>Moodle Activity Report</title>
+    <link rel="stylesheet" href="output.css">
+    <style>
+
+    </style>
+</head>
+<body x-data="credentialsApp()">
+<!-- Flash prevention: runs synchronously before any element paints -->
+<script>try{if(localStorage.getItem('moodleTheme')==='light')document.body.classList.add('light-mode')}catch(_){}</script>
+
+<!-- ── Settings Backdrop + Modal ────────────────────────────────────────────── -->
+<div
+    class="modal-backdrop modal-overlay"
+    x-show="open"
+    x-cloak
+    x-transition:enter="transition-opacity ease-out duration-200"
+    x-transition:enter-start="opacity-0"
+    x-transition:enter-end="opacity-100"
+    x-transition:leave="transition-opacity ease-in duration-150"
+    x-transition:leave-start="opacity-100"
+    x-transition:leave-end="opacity-0"
+    @click.self="open = false"
+    @keydown.escape.window="open = false">
+
+    <div id="settingsModal" class="tech-card modal-card-sm"
+         @click.stop>
+
+        <!-- Modal header -->
+        <div class="modal-header">
+            <div class="modal-title-row">
+                <img src="src/icons/settings.svg" width="15" height="15" class="icon-img" alt="">
+                <span class="tech-title modal-title">Credentials</span>
+            </div>
+            <button @click="open = false" class="header-icon-btn modal-close-btn" title="Close">
+                <svg width="13" height="13" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/>
+                </svg>
+            </button>
+        </div>
+
+        <!-- Modal body -->
+        <div style="padding:20px">
+            <div style="margin-bottom:14px">
+                <label for="modalUrl" class="modal-label">
+                    Server URL
+                </label>
+                <input type="text" id="modalUrl" class="tech-input"
+                    x-model="modalUrl"
+                    placeholder="https://yourmoodle.edu"
+                    autocomplete="off" spellcheck="false">
+            </div>
+            <div style="margin-bottom:14px">
+                <label for="modalToken" class="modal-label">
+                    WS Token
+                </label>
+                <input type="text" id="modalToken" class="tech-input"
+                    x-model="modalToken"
+                    @input="onTokenInput()"
+                    placeholder="Web service token"
+                    autocomplete="off" spellcheck="false">
+                <!-- Live token status -->
+                <div class="modal-token-status">
+                    <span x-show="tokenStatus === 'checking'" x-cloak class="token-checking">
+                        <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"
+                             class="spin-icon">
+                            <path stroke-linecap="round" d="M12 2a10 10 0 0110 10"/>
+                        </svg>
+                        Checking…
+                    </span>
+                    <span x-show="tokenStatus === 'valid'"   x-cloak style="color:#34d399">✓ Token valid</span>
+                    <span x-show="tokenStatus === 'invalid'" x-cloak style="color:#f87171">✗ Invalid token</span>
+                    <span x-show="tokenStatus === 'failed'"  x-cloak style="color:rgba(148,163,184,.45)">Could not verify</span>
+                </div>
+            </div>
+            <div style="margin-bottom:8px">
+                <label for="modalCookie" class="modal-label">
+                    Session Cookie
+                </label>
+                <input type="text" id="modalCookie" class="tech-input"
+                    x-model="modalCookie" placeholder="MoodleSession=abc123…"
+                    autocomplete="off" spellcheck="false">
+                <p class="field-hint">Session cookie cannot be verified automatically.</p>
+            </div>
+            <p class="creds-help-text">
+                <strong class="creds-help-strong">Chrome/Edge:</strong>
+                F12 → Application → Cookies → copy
+                <code class="code-chip">MoodleSession</code> value.<br>
+                <strong class="creds-help-strong">Firefox:</strong> F12 → Storage → Cookies.<br>
+                <span style="color:rgba(251,191,36,.75)">⚠ Must be logged in as admin. Session expires on logout.</span>
+            </p>
+            <div class="modal-footer-btns">
+                <button @click="saveCreds()" class="tech-btn" style="flex:1">Save</button>
+                <button @click="clearCreds()" class="tech-btn btn-muted">
+                    Clear Fields
+                </button>
+            </div>
+        </div>
+
+    </div>
+</div>
+
+<!-- ── Strategy Manager Backdrop + Modal ────────────────────────────────────── -->
+<div
+    class="modal-backdrop modal-overlay"
+    x-show="strategyOpen"
+    x-cloak
+    x-transition:enter="transition-opacity ease-out duration-200"
+    x-transition:enter-start="opacity-0"
+    x-transition:enter-end="opacity-100"
+    x-transition:leave="transition-opacity ease-in duration-150"
+    x-transition:leave-start="opacity-100"
+    x-transition:leave-end="opacity-0"
+    @click.self="strategyOpen = false"
+    @keydown.escape.window="strategyOpen = false"
+    @strategy-close.window="strategyOpen = false">
+
+    <div id="strategyModal" class="tech-card modal-card-lg" x-data="strategyApp()"
+         @click.stop>
+
+        <!-- Modal header -->
+        <div class="modal-header">
+            <div class="modal-title-row-lg">
+                <img src="src/icons/logs.svg" width="15" height="15" class="icon-img" alt="">
+                <span class="tech-title modal-title">Strategy Manager</span>
+                <span x-show="status === 'saving'" x-cloak class="modal-status-saving">saving…</span>
+                <span x-show="status === 'saved'"  x-cloak class="modal-status-saved">✓ saved</span>
+                <span x-show="status === 'error'"  x-cloak class="modal-status-error">save failed</span>
+            </div>
+            <button @click="$dispatch('strategy-close')" class="header-icon-btn modal-close-btn" title="Close">
+                <svg width="13" height="13" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/>
+                </svg>
+            </button>
+        </div>
+
+        <!-- Inline error -->
+        <div x-show="error" x-cloak class="modal-error-bar">
+            <span class="modal-error-text" x-text="error"></span>
+            <button @click="error = ''" class="modal-error-dismiss">×</button>
+        </div>
+
+        <!-- Add new strategy -->
+        <div class="modal-add-section">
+            <div class="modal-section-label">Add Strategy</div>
+            <div class="modal-add-row">
+                <input type="text" class="tech-input modal-add-input" x-model="newStrategyName"
+                    placeholder="Strategy name"
+                    @keydown.enter="addStrategy()">
+                <input type="text" class="tech-input modal-add-input" x-model="newStrategyKeyword"
+                    placeholder="First keyword (optional)"
+                    @keydown.enter="addStrategy()">
+                <button @click="addStrategy()" class="tech-btn btn-add">+ Add</button>
+            </div>
+        </div>
+
+        <!-- Strategies list — scrollable -->
+        <div class="modal-list">
+            <template x-for="strategy in strategies" :key="strategy.name">
+                <div class="modal-list-item">
+
+                    <!-- Name row -->
+                    <div class="list-item-header">
+                        <span class="item-name" x-text="strategy.name"></span>
+                        <template x-if="!strategy.isDefault">
+                            <button @click="deleteStrategy(strategy.name)" class="btn-remove">× Remove</button>
+                        </template>
+                        <template x-if="strategy.isDefault">
+                            <span class="badge-default">default</span>
+                        </template>
+                    </div>
+
+                    <!-- Keywords -->
+                    <div class="keywords-row">
+                        <template x-for="kw in strategy.keywords" :key="kw">
+                            <span class="keyword-chip">
+                                <span x-text="kw"></span>
+                                <button @click="removeKeyword(strategy.name, kw)" class="keyword-remove-btn">×</button>
+                            </span>
+                        </template>
+                        <input type="text"
+                            :value="keywordInputs[strategy.name] || ''"
+                            @input="keywordInputs[strategy.name] = $event.target.value"
+                            @keydown.enter="addKeyword(strategy.name)"
+                            placeholder="+ keyword"
+                            class="tech-input keyword-input">
+                        <button @click="addKeyword(strategy.name)" class="btn-add-keyword">Add</button>
+                    </div>
+
+                </div>
+            </template>
+        </div>
+
+    </div>
+</div>
+
+<!-- ── Subject Manager Backdrop + Modal ─────────────────────────────────────── -->
+<div
+    class="modal-backdrop modal-overlay"
+    x-show="subjectOpen"
+    x-cloak
+    x-transition:enter="transition-opacity ease-out duration-200"
+    x-transition:enter-start="opacity-0"
+    x-transition:enter-end="opacity-100"
+    x-transition:leave="transition-opacity ease-in duration-150"
+    x-transition:leave-start="opacity-100"
+    x-transition:leave-end="opacity-0"
+    @click.self="subjectOpen = false"
+    @keydown.escape.window="subjectOpen = false"
+    @subject-close.window="subjectOpen = false">
+
+    <div id="subjectModal" class="tech-card modal-card-lg" x-data="subjectApp()"
+         @click.stop>
+
+        <!-- Modal header -->
+        <div class="modal-header">
+            <div class="modal-title-row-lg">
+                <img src="src/icons/notebook.svg" width="15" height="15" class="icon-img" alt="">
+                <span class="tech-title modal-title">Subject Manager</span>
+                <span x-show="status === 'saving'" x-cloak class="modal-status-saving">saving…</span>
+                <span x-show="status === 'saved'"  x-cloak class="modal-status-saved">✓ saved</span>
+                <span x-show="status === 'error'"  x-cloak class="modal-status-error">save failed</span>
+            </div>
+            <button @click="$dispatch('subject-close')" class="header-icon-btn modal-close-btn" title="Close">
+                <svg width="13" height="13" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/>
+                </svg>
+            </button>
+        </div>
+
+        <!-- Inline error -->
+        <div x-show="error" x-cloak class="modal-error-bar">
+            <span class="modal-error-text" x-text="error"></span>
+            <button @click="error = ''" class="modal-error-dismiss">×</button>
+        </div>
+
+        <!-- Add new subject -->
+        <div class="modal-add-section">
+            <div class="modal-section-label">Add Subject</div>
+            <div class="modal-add-row">
+                <input type="text" class="tech-input modal-add-input" x-model="newSubjectName"
+                    placeholder="Subject name"
+                    @keydown.enter="addSubject()">
+                <input type="text" class="tech-input modal-add-input" x-model="newSubjectKeyword"
+                    placeholder="First keyword (optional)"
+                    @keydown.enter="addSubject()">
+                <button @click="addSubject()" class="tech-btn btn-add">+ Add</button>
+            </div>
+        </div>
+
+        <!-- Subjects list — scrollable -->
+        <div class="modal-list">
+            <template x-for="subject in subjects" :key="subject.name">
+                <div class="modal-list-item">
+
+                    <!-- Name row -->
+                    <div class="list-item-header">
+                        <span class="item-name" x-text="subject.name"></span>
+                        <template x-if="!subject.isDefault">
+                            <button @click="deleteSubject(subject.name)" class="btn-remove">× Remove</button>
+                        </template>
+                        <template x-if="subject.isDefault">
+                            <span class="badge-default">default</span>
+                        </template>
+                    </div>
+
+                    <!-- Keywords -->
+                    <div class="keywords-row">
+                        <template x-for="kw in subject.keywords" :key="kw">
+                            <span class="keyword-chip">
+                                <span x-text="kw"></span>
+                                <button @click="removeKeyword(subject.name, kw)" class="keyword-remove-btn">×</button>
+                            </span>
+                        </template>
+                        <input type="text"
+                            :value="keywordInputs[subject.name] || ''"
+                            @input="keywordInputs[subject.name] = $event.target.value"
+                            @keydown.enter="addKeyword(subject.name)"
+                            placeholder="+ keyword"
+                            class="tech-input keyword-input">
+                        <button @click="addKeyword(subject.name)" class="btn-add-keyword">Add</button>
+                    </div>
+
+                </div>
+            </template>
+        </div>
+
+    </div>
+</div>
+
+<!-- ── Header ────────────────────────────────────────────────────────────────── -->
+<header class="app-header">
+    <div class="header-inner">
+
+        <!-- Logo + title -->
+        <div class="header-brand">
+            <div class="header-logo">
+                <svg width="16" height="16" fill="none" stroke="#a78bfa" stroke-width="2" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M9 17v-2m3 2v-4m3 4v-6M5 17h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z"/>
+                </svg>
+            </div>
+            <div>
+                <div class="tech-title header-title-text">Moodle Activity Report</div>
+                <div class="header-subtitle">Course module creation log &bull; Dates in MM/DD/YYYY</div>
+            </div>
+        </div>
+
+        <!-- Right: theme toggle + gear -->
+        <div class="header-actions">
+
+            <!-- Theme toggle button -->
+            <button @click="toggleTheme()"
+                class="header-icon-btn"
+                :title="darkMode ? 'Switch to light mode' : 'Switch to dark mode'">
+                <!-- Sun — visible in dark mode, click to go light -->
+                <img x-show="darkMode" src="src/icons/sun.svg" width="16" height="16" class="icon-img" alt="">
+                <!-- Moon — visible in light mode, click to go dark -->
+                <img x-show="!darkMode" x-cloak src="src/icons/moon.svg" width="16" height="16" class="icon-img" alt="">
+            </button>
+
+            <!-- Subject Manager button -->
+            <button @click="subjectOpen = true" class="tech-btn btn-icon-only" title="Manage subjects">
+                <img src="src/icons/notebook.svg" width="16" height="16" class="icon-img" alt="">
+            </button>
+
+            <!-- Strategy Manager button -->
+            <button @click="strategyOpen = true" class="tech-btn btn-icon-only" title="Manage strategies">
+                <img src="src/icons/logs.svg" width="16" height="16" class="icon-img" alt="">
+            </button>
+
+            <!-- Gear button -->
+            <div style="position:relative">
+                <button @click="open = true" class="header-icon-btn" title="Set credentials">
+                    <img src="src/icons/settings.svg" width="16" height="16" class="icon-img" alt="">
+                </button>
+                <!-- Saved indicator dot -->
+                <span x-show="hasCreds" x-cloak class="creds-indicator"></span>
+            </div>
+
+        </div>
+    </div>
+</header>
+
+<!-- ── Main ──────────────────────────────────────────────────────────────────── -->
+<main class="app-main">
+
+    <!-- Config card -->
+    <div class="tech-card config-card">
+
+        <!-- Hidden inputs — read by app.js, populated from localStorage on load -->
+        <input type="hidden" id="wsToken">
+        <input type="hidden" id="sessionKey">
+
+        <div>
+            <label for="courseUrl" class="modal-label">
+                Course URL
+            </label>
+            <textarea id="courseUrl" rows="3" class="tech-input" style="font-family:monospace"
+                placeholder="https://yourmoodle.edu/course/view.php?id=2&#10;One URL per line for multiple courses"></textarea>
+            <button id="fetchBtn" class="tech-btn btn-full">Generate</button>
+        </div>
+
+        <!-- Status message -->
+        <div id="statusMessage" class="status-msg">
+            Enter course URL and click Generate Report.
+        </div>
+
+        <!-- Progress bar -->
+        <div id="progressWrap" class="progress-wrap" style="display:none">
+            <div class="progress-header">
+                <span id="progressLabel">Fetching logs…</span>
+                <span id="progressPct">0%</span>
+            </div>
+            <div class="progress-track">
+                <div id="progressBar" class="progress-fill" style="width:0%"></div>
+            </div>
+        </div>
+
+    </div>
+
+    <!-- CORS notice -->
+    <div id="corsNotice" class="cors-notice" style="display:none">
+        <p class="cors-title">⚠ Browser blocked the log page request (CORS)</p>
+        <p class="cors-text">Cross-origin restrictions prevent fetching log pages directly. Options:</p>
+        <ul class="cors-text cors-list">
+            <li>Upload this file to your Moodle server and open it from there</li>
+            <li>Use a browser extension like <strong>CORS Unblock</strong> (testing only)</li>
+        </ul>
+    </div>
+
+    <!-- Results card -->
+    <div class="tech-card" style="overflow:hidden">
+
+        <!-- Course name banner -->
+        <div id="courseNameSection" class="course-banner" style="display:none">
+            <div class="course-banner-label">Course</div>
+            <a id="courseNameDisplay" href="#" target="_blank" rel="noopener"
+               class="course-name-link"></a>
+        </div>
+
+        <!-- Tab bar + toolbar -->
+        <div class="tab-bar">
+
+            <!-- Tabs -->
+            <div style="display:flex">
+                <button id="tabAll" class="tab-btn tab-btn--active">
+                    All
+                    <span id="countAll" class="tab-count tab-count--active">0</span>
+                </button>
+                <button id="tabTeachers" class="tab-btn">
+                    Teachers Creation
+                    <span id="countTeachers" class="tab-count">0</span>
+                </button>
+                <button id="tabOer" class="tab-btn">
+                    OER
+                    <span id="countOer" class="tab-count">0</span>
+                </button>
+            </div>
+
+            <!-- Toolbar -->
+            <div class="toolbar">
+
+                <!-- Download -->
+                <button id="downloadBtn" class="tech-btn toolbar-download-btn"
+                    disabled>
+                    <img src="src/icons/download.svg" width="13" height="13" class="icon-img" alt="">
+                    Download CSV
+                </button>
+
+                <!-- Reset Table -->
+                <button id="resetBtn" class="tech-btn btn-icon-only" title="Reset to default view">
+                    <img src="src/icons/list-reset.svg" width="13" height="13" class="icon-img" alt="">
+                </button>
+
+                <!-- Row count -->
+                <span id="rowCount" class="row-count-badge">0 entries</span>
+
+            </div>
+        </div>
+
+        <!-- Table -->
+        <div style="overflow-x:auto">
+            <table class="report-table">
+                <thead>
+                    <tr class="table-head-row">
+                        <th class="th-cell-nowrap">#</th>
+                        <th data-sort="rawTs" class="th-cell-nowrap">Date<span class="sort-ind">⇅</span><span id="dateFilterIcon" class="type-filter-icon" title="Filter by date"><svg width="11" height="11" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg></span></th>
+                        <th data-sort="fullname" class="th-cell">User<span class="sort-ind">⇅</span></th>
+                        <th data-sort="activityType" class="th-cell-nowrap">Activity Type<span class="sort-ind">⇅</span><span id="typeFilterIcon" class="type-filter-icon" title="Filter by activity type"><svg width="11" height="11" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M3 6h18M6 12h12M10 18h4"/></svg></span></th>
+                        <th data-sort="activityName" class="th-cell">Activity Name<span class="sort-ind">⇅</span></th>
+                        <th data-sort="subject" class="th-cell-nowrap">Subject<span class="sort-ind">⇅</span></th>
+                        <th id="thStrategy" class="th-cell-nowrap">Strategy</th>
+                        <th class="th-cell-center" title="Logs">
+                            <img src="src/icons/external-link.svg" width="13" height="13" class="icon-img th-icon-muted" alt="">
+                        </th>
+                    </tr>
+                </thead>
+                <tbody id="reportTbody">
+                    <tr>
+                        <td colspan="8" class="empty-state-cell" style="color:rgba(148,163,184,.35)">
+                            No data yet. Enter course URL(s) and click Generate Report.
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+
+    </div>
+
+    <!-- Footer -->
+    <div class="app-footer">
+        <span>Date &amp; creator parsed from Moodle log pages</span>
+        <span class="legend-item">
+            <span class="legend-dot legend-dot-verified"></span>
+            VERIFIED = Course module created event
+        </span>
+        <span class="legend-item">
+            <span class="legend-dot legend-dot-inferred"></span>
+            INFERRED = oldest log event
+        </span>
+        <span class="legend-item">
+            <span class="legend-dot legend-dot-estimated"></span>
+            EST = fallback (mod.added / timecreated)
+        </span>
+    </div>
+
+</main>
+
+<!-- ── Alpine component ───────────────────────────────────────────────────────── -->
+<script>
+function credentialsApp() {
+    return {
+        open:         false,
+        strategyOpen: false,
+        subjectOpen:  false,
+        modalToken:   '',
+        modalCookie:  '',
+        modalUrl:     '',
+        hasCreds:     false,
+        darkMode:     true,
+        LS_KEY:       'moodleCredentials',
+        tokenStatus:  '',   // '' | 'checking' | 'valid' | 'invalid' | 'failed'
+        tokenTimer:   null,
+
+        init() {
+            // Theme
+            this.darkMode = localStorage.getItem('moodleTheme') !== 'light';
+            document.body.classList.toggle('light-mode', !this.darkMode);
+
+            // Credentials
+            const creds = this._load();
+            if (creds) {
+                this.modalToken  = creds.token  || '';
+                this.modalCookie = creds.cookie || '';
+                this.modalUrl    = creds.url    || '';
+                this._apply(creds.token, creds.cookie);
+                if (creds.url) this._applyUrl(creds.url);
+            }
+            this.hasCreds = !!(creds && (creds.token || creds.cookie));
+            if (!this.hasCreds) {
+                document.getElementById('statusMessage').textContent =
+                    'Click ⚙ to set your WS Token & Session Cookie, then enter the course URL and click Generate Report.';
+            }
+
+            // Pre-fill course URL value from saved server URL, or use fallback
+            const urlInput = document.getElementById('courseUrl');
+            if (urlInput && !urlInput.value) {
+                const savedUrl = creds?.url?.replace(/\/$/, '');
+                urlInput.value = savedUrl
+                    ? `${savedUrl}/course/view.php?id=`
+                    : 'https://uslt.aralinks.com/course/view.php?id=2';
+            }
+
+            // Reload saved credentials into the modal fields every time it opens
+            this.$watch('open', val => {
+                if (!val) return;
+                const saved = this._load();
+                this.modalToken  = saved?.token  || '';
+                this.modalCookie = saved?.cookie || '';
+                this.modalUrl    = saved?.url    || '';
+                this.tokenStatus = '';
+            });
+        },
+
+        toggleTheme() {
+            this.darkMode = !this.darkMode;
+            localStorage.setItem('moodleTheme', this.darkMode ? 'dark' : 'light');
+            document.body.classList.toggle('light-mode', !this.darkMode);
+        },
+
+        _load() {
+            try {
+                const raw = localStorage.getItem(this.LS_KEY);
+                return raw ? JSON.parse(atob(raw)) : null;
+            } catch (_) { return null; }
+        },
+
+        _apply(token, cookie) {
+            document.getElementById('wsToken').value    = token  || '';
+            document.getElementById('sessionKey').value = cookie || '';
+        },
+
+        _applyUrl(url) {
+            const el = document.getElementById('courseUrl');
+            if (el && url) el.placeholder = `${url}/course/view.php?id=\nOne URL per line for multiple courses`;
+        },
+
+        saveCreds() {
+            const token  = this.modalToken.trim();
+            const cookie = this.modalCookie.trim();
+            const url    = this.modalUrl.trim().replace(/\/$/, '');
+            localStorage.setItem(this.LS_KEY, btoa(JSON.stringify({ token, cookie, url })));
+            this._apply(token, cookie);
+            if (url) this._applyUrl(url);
+            this.hasCreds = !!(token || cookie);
+            this.open = false;
+            const el = document.getElementById('statusMessage');
+            el.textContent = 'Credentials saved. Enter course URL and click Generate Report.';
+            el.className = 'status-msg status-msg--success';
+        },
+
+        clearCreds() {
+            this.modalToken  = '';
+            this.modalCookie = '';
+            this.modalUrl    = '';
+        },
+
+        onTokenInput() {
+            clearTimeout(this.tokenTimer);
+            this.tokenStatus = '';
+            this.tokenTimer = setTimeout(() => this.validateToken(), 800);
+        },
+
+        async validateToken() {
+            const token = this.modalToken.trim();
+            const serverUrl = this.modalUrl.trim();
+            if (!token || !serverUrl) { this.tokenStatus = ''; return; }
+            let baseUrl;
+            try { new URL(serverUrl); baseUrl = serverUrl.replace(/\/$/, ''); } catch { this.tokenStatus = ''; return; }
+            this.tokenStatus = 'checking';
+            try {
+                const params = new URLSearchParams({
+                    wstoken: token,
+                    wsfunction: 'core_webservice_get_site_info',
+                    moodlewsrestformat: 'json',
+                });
+                const targetUrl = `${baseUrl}/webservice/rest/server.php?${params}`;
+                const res  = await fetch(apiProxyUrl(targetUrl));
+                const data = await res.json();
+                if (data?.exception || data?.error || data?.errorcode) {
+                    this.tokenStatus = 'invalid';
+                } else if (data?.sitename || data?.siteurl) {
+                    this.tokenStatus = 'valid';
+                } else {
+                    this.tokenStatus = 'invalid';
+                }
+            } catch {
+                this.tokenStatus = 'failed';
+            }
+        }
+    };
+}
+</script>
+
+<script>
+function strategyApp() {
+  return {
+    open: false,
+    strategies: [],
+    newStrategyName: '',
+    newStrategyKeyword: '',
+    keywordInputs: {},
+    status: '',
+    error: '',
+
+    async init() {
+      const res = await fetch('/strategies');
+      const data = await res.json();
+      this.strategies = data.strategies || [];
+    },
+
+    isKeywordDuplicate(keyword, excludeStrategyName = null) {
+      const kw = keyword.trim().toLowerCase();
+      for (const s of this.strategies) {
+        if (s.name === excludeStrategyName) continue;
+        if (s.keywords.map(k => k.toLowerCase()).includes(kw)) {
+          return s.name;
+        }
+      }
+      return null;
+    },
+
+    async addKeyword(strategyName) {
+      const kw = (this.keywordInputs[strategyName] || '').trim();
+      if (!kw) return;
+      const owner = this.isKeywordDuplicate(kw);
+      if (owner) {
+        this.error = `"${kw}" is already used by "${owner}"`;
+        return;
+      }
+      this.error = '';
+      const s = this.strategies.find(s => s.name === strategyName);
+      if (s) s.keywords.push(kw);
+      this.keywordInputs[strategyName] = '';
+      await this.save();
+    },
+
+    removeKeyword(strategyName, keyword) {
+      const s = this.strategies.find(s => s.name === strategyName);
+      if (s) s.keywords = s.keywords.filter(k => k !== keyword);
+      this.save();
+    },
+
+    async addStrategy() {
+      const name = this.newStrategyName.trim();
+      const kw   = this.newStrategyKeyword.trim();
+      if (!name) return;
+      if (this.strategies.find(s => s.name.toLowerCase() === name.toLowerCase())) {
+        this.error = `Strategy "${name}" already exists.`;
+        return;
+      }
+      if (kw) {
+        const owner = this.isKeywordDuplicate(kw);
+        if (owner) {
+          this.error = `"${kw}" is already used by "${owner}"`;
+          return;
+        }
+      }
+      this.error = '';
+      this.strategies.push({
+        name,
+        keywords: kw ? [kw] : [],
+        isDefault: false
+      });
+      this.newStrategyName = '';
+      this.newStrategyKeyword = '';
+      await this.save();
+    },
+
+    deleteStrategy(strategyName) {
+      const s = this.strategies.find(s => s.name === strategyName);
+      if (s && s.isDefault) return;
+      this.strategies = this.strategies.filter(s => s.name !== strategyName);
+      this.save();
+    },
+
+    async save() {
+      this.status = 'saving';
+      try {
+        await fetch('/strategies', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ strategies: this.strategies })
+        });
+        this.status = 'saved';
+        window.dispatchEvent(new CustomEvent('strategies-updated'));
+        setTimeout(() => this.status = '', 2000);
+      } catch (e) {
+        this.status = 'error';
+      }
+    }
+  };
+}
+</script>
+
+<script>
+function subjectApp() {
+  return {
+    subjects: [],
+    newSubjectName: '',
+    newSubjectKeyword: '',
+    keywordInputs: {},
+    status: '',
+    error: '',
+
+    async init() {
+      const res = await fetch('/subjects');
+      const data = await res.json();
+      this.subjects = data.subjects || [];
+    },
+
+    isKeywordDuplicate(keyword, excludeSubjectName = null) {
+      const kw = keyword.trim().toLowerCase();
+      for (const s of this.subjects) {
+        if (s.name === excludeSubjectName) continue;
+        if (s.keywords.map(k => k.toLowerCase()).includes(kw)) return s.name;
+      }
+      return null;
+    },
+
+    async addKeyword(subjectName) {
+      const kw = (this.keywordInputs[subjectName] || '').trim();
+      if (!kw) return;
+      const owner = this.isKeywordDuplicate(kw);
+      if (owner) { this.error = `"${kw}" is already used by "${owner}"`; return; }
+      this.error = '';
+      const s = this.subjects.find(s => s.name === subjectName);
+      if (s) s.keywords.push(kw);
+      this.keywordInputs[subjectName] = '';
+      await this.save();
+    },
+
+    removeKeyword(subjectName, keyword) {
+      const s = this.subjects.find(s => s.name === subjectName);
+      if (s) s.keywords = s.keywords.filter(k => k !== keyword);
+      this.save();
+    },
+
+    async addSubject() {
+      const name = this.newSubjectName.trim();
+      const kw   = this.newSubjectKeyword.trim();
+      if (!name) return;
+      if (this.subjects.find(s => s.name.toLowerCase() === name.toLowerCase())) {
+        this.error = `Subject "${name}" already exists.`; return;
+      }
+      if (kw) {
+        const owner = this.isKeywordDuplicate(kw);
+        if (owner) { this.error = `"${kw}" is already used by "${owner}"`; return; }
+      }
+      this.error = '';
+      this.subjects.push({ name, keywords: kw ? [kw] : [], isDefault: false });
+      this.newSubjectName = '';
+      this.newSubjectKeyword = '';
+      await this.save();
+    },
+
+    deleteSubject(subjectName) {
+      const s = this.subjects.find(s => s.name === subjectName);
+      if (s && s.isDefault) return;
+      this.subjects = this.subjects.filter(s => s.name !== subjectName);
+      this.save();
+    },
+
+    async save() {
+      this.status = 'saving';
+      try {
+        await fetch('/subjects', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ subjects: this.subjects })
+        });
+        this.status = 'saved';
+        window.dispatchEvent(new CustomEvent('subjects-updated'));
+        setTimeout(() => this.status = '', 2000);
+      } catch {
+        this.status = 'error';
+      }
+    }
+  };
+}
+</script>
+
+<script src="app.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+</body>
+</html>

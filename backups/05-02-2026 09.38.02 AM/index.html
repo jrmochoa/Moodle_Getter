@@ -1,0 +1,1139 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+    <meta http-equiv="Content-Security-Policy" content="frame-ancestors 'none'">
+    <title>Moodle Activity Report</title>
+    <link rel="stylesheet" href="output.css">
+    <style>
+        *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+        input, button { font-family: inherit; }
+
+        /* ── Grid Tech background ──────────────────────────────────────────── */
+        body {
+            font-family: system-ui, -apple-system, sans-serif;
+            background-color: #07000f;
+            background-image:
+                linear-gradient(rgba(167,139,250,.04) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(167,139,250,.04) 1px, transparent 1px);
+            background-size: 44px 44px;
+            color: #e2e8f0;
+            min-height: 100vh;
+            position: relative;
+            overflow-x: hidden;
+        }
+
+        /* Glow orb — centered top */
+        body::before {
+            content: '';
+            position: fixed;
+            top: -420px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 920px; height: 920px;
+            background: radial-gradient(circle, rgba(109,40,217,.14) 0%, transparent 60%);
+            animation: orbpulse 5s ease-in-out infinite;
+            pointer-events: none;
+            z-index: 0;
+        }
+
+        @keyframes orbpulse {
+            0%, 100% { opacity: .55; transform: translateX(-50%) scale(1); }
+            50%       { opacity: 1;   transform: translateX(-50%) scale(1.07); }
+        }
+
+        /* ── Modal backdrop — display:flex must live here so x-show doesn't destroy it ── */
+        .modal-backdrop {
+            position: fixed;
+            top: 0; left: 0; right: 0; bottom: 0;
+            z-index: 9999;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        /* ── Modal card entrance ───────────────────────────────────────────── */
+        @keyframes modalIn {
+            from { opacity: 0; transform: scale(.96) translateY(10px); }
+            to   { opacity: 1; transform: scale(1)   translateY(0); }
+        }
+        #settingsModal, #strategyModal, #subjectModal { animation: modalIn .2s ease-out; }
+
+        /* ── Textarea resize disable ──────────────────────────────────────────── */
+        textarea.tech-input { resize: none; line-height: 1.6; }
+
+        /* ── Component utilities ───────────────────────────────────────────── */
+        .tech-card {
+            background: rgba(7,0,18,.8);
+            backdrop-filter: blur(14px);
+            -webkit-backdrop-filter: blur(14px);
+            border: 1px solid rgba(139,92,246,.22);
+            border-radius: 12px;
+            transition: border-color .2s, box-shadow .2s;
+        }
+        .tech-card:hover {
+            border-color: rgba(139,92,246,.42);
+            box-shadow: 0 0 28px rgba(109,40,217,.12);
+        }
+
+        .tech-input {
+            width: 100%;
+            background: rgba(7,0,18,.7);
+            border: 1px solid rgba(139,92,246,.3);
+            border-radius: 8px;
+            color: #ede9fe;
+            font-size: 13px;
+            padding: 8px 12px;
+            transition: border-color .15s, box-shadow .15s;
+        }
+        .tech-input:focus {
+            outline: none;
+            border-color: #a78bfa;
+            box-shadow: 0 0 0 3px rgba(139,92,246,.18);
+        }
+        .tech-input::placeholder { color: rgba(148,163,184,.4); }
+
+        .tech-btn {
+            background: transparent;
+            border: 1px solid rgba(139,92,246,.55);
+            color: #a78bfa;
+            border-radius: 8px;
+            font-size: 13px;
+            font-weight: 600;
+            padding: 8px 20px;
+            cursor: pointer;
+            white-space: nowrap;
+            text-shadow: 0 0 8px rgba(139,92,246,.5);
+            transition: background .15s, box-shadow .15s, border-color .15s;
+        }
+        .tech-btn:hover {
+            background: rgba(139,92,246,.14);
+            border-color: #a78bfa;
+            box-shadow: 0 0 18px rgba(109,40,217,.3);
+        }
+
+        .tech-title {
+            color: #a78bfa;
+            text-shadow: 0 0 10px rgba(139,92,246,.6), 0 0 24px rgba(109,40,217,.25);
+        }
+
+        /* ── Header icon buttons ───────────────────────────────────────────── */
+        .header-icon-btn {
+            width: 36px; height: 36px;
+            display: flex; align-items: center; justify-content: center;
+            background: rgba(139,92,246,.1);
+            border: 1px solid rgba(139,92,246,.3);
+            border-radius: 8px;
+            cursor: pointer;
+            color: #a78bfa;
+            transition: background .15s, box-shadow .15s;
+        }
+        .header-icon-btn:hover {
+            background: rgba(139,92,246,.2);
+            box-shadow: 0 0 14px rgba(109,40,217,.28);
+        }
+
+        /* ── Table overrides — !important beats app.js inline styles ──────── */
+        #reportTbody tr            { border-bottom: 1px solid rgba(139,92,246,.07) !important; }
+        #reportTbody tr:last-child { border-bottom: none !important; }
+        #reportTbody tr:hover      { background: rgba(139,92,246,.05) !important; }
+
+        /* Course name link — CSS hover instead of inline onmouseover */
+        #courseNameDisplay { transition: color .15s; }
+        #courseNameDisplay:hover { color: #a78bfa !important; text-decoration: underline !important; }
+
+        summary { list-style: none; }
+        summary::-webkit-details-marker { display: none; }
+
+        @keyframes spin { to { transform: rotate(360deg); } }
+
+        /* Alpine cloak */
+        [x-cloak] { display: none !important; }
+
+        /* ── Strategy select ───────────────────────────────────────────────── */
+        .strategy-sel {
+            background: rgba(7,0,18,.7);
+            color: #ede9fe;
+            border: 1px solid rgba(139,92,246,.3);
+            border-radius: 6px;
+            padding: 2px 6px;
+            font-size: 11px;
+            cursor: pointer;
+        }
+        .strategy-sel:focus { outline: none; border-color: #a78bfa; box-shadow: 0 0 0 2px rgba(139,92,246,.18); }
+
+        /* ── View Logs link ─────────────────────────────────────────────────── */
+        .log-btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 5px;
+            padding: 4px 12px;
+            background: rgba(139,92,246,.1);
+            color: #a78bfa;
+            font-size: 11px;
+            font-weight: 700;
+            border: 1px solid rgba(139,92,246,.28);
+            border-radius: 99px;
+            text-decoration: none;
+            white-space: nowrap;
+            transition: background .15s, box-shadow .15s;
+        }
+        .log-btn:hover { background: rgba(139,92,246,.22); box-shadow: 0 0 10px rgba(109,40,217,.2); }
+
+        /* ── Light mode ────────────────────────────────────────────────────── */
+        body.light-mode {
+            background-color: #f5f3ff;
+            background-image:
+                linear-gradient(rgba(109,40,217,.05) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(109,40,217,.05) 1px, transparent 1px);
+            color: #1e1230;
+        }
+        body.light-mode::before {
+            background: radial-gradient(circle, rgba(109,40,217,.06) 0%, transparent 60%);
+        }
+        body.light-mode .tech-card {
+            background: rgba(255,255,255,.88);
+            border-color: rgba(109,40,217,.18);
+            box-shadow: 0 1px 4px rgba(109,40,217,.06);
+        }
+        body.light-mode .tech-card:hover {
+            border-color: rgba(109,40,217,.38);
+            box-shadow: 0 4px 20px rgba(109,40,217,.09);
+        }
+        body.light-mode .tech-input {
+            background: #fff;
+            border-color: rgba(109,40,217,.22);
+            color: #1e1230;
+        }
+        body.light-mode .tech-input::placeholder { color: rgba(100,116,139,.5); }
+        body.light-mode .tech-input:focus { border-color: #7c3aed; box-shadow: 0 0 0 3px rgba(109,40,217,.12); }
+        body.light-mode .tech-btn { color: #7c3aed; text-shadow: none; border-color: rgba(109,40,217,.45); }
+        body.light-mode .tech-btn:hover { background: rgba(109,40,217,.07); border-color: #7c3aed; box-shadow: 0 0 14px rgba(109,40,217,.12); }
+        body.light-mode .tech-title { color: #6d28d9; text-shadow: 0 0 8px rgba(109,40,217,.15); }
+        body.light-mode .header-icon-btn { background: rgba(109,40,217,.08); border-color: rgba(109,40,217,.22); color: #7c3aed; }
+        body.light-mode .header-icon-btn:hover { background: rgba(109,40,217,.16); box-shadow: 0 0 12px rgba(109,40,217,.15); }
+        body.light-mode header { background: rgba(250,248,255,.96) !important; border-bottom-color: rgba(109,40,217,.12) !important; }
+        body.light-mode #reportTbody tr { border-bottom: 1px solid rgba(109,40,217,.06) !important; }
+        body.light-mode #reportTbody tr:hover { background: rgba(109,40,217,.04) !important; }
+        body.light-mode #courseNameDisplay { color: #1e1230 !important; }
+        body.light-mode #courseNameDisplay:hover { color: #6d28d9 !important; }
+        body.light-mode .strategy-sel { background: #fff; color: #1e1230; border-color: rgba(109,40,217,.22); }
+        body.light-mode .strategy-sel:focus { border-color: #7c3aed; }
+        body.light-mode .log-btn { background: rgba(109,40,217,.07); color: #6d28d9; border-color: rgba(109,40,217,.22); }
+        body.light-mode .log-btn:hover { background: rgba(109,40,217,.14); }
+
+        /* ── Modal light-mode fixes ─────────────────────────────────────────── */
+        /* Item name spans rendered by Alpine x-text (near-white on white card) */
+        body.light-mode #strategyModal [style*="color:#ede9fe"],
+        body.light-mode #subjectModal  [style*="color:#ede9fe"] { color: #1e1230 !important; }
+
+        /* Section add-header labels ("Add Strategy / Add Subject") */
+        body.light-mode #strategyModal [style*="rgba(167,139,250,.45)"],
+        body.light-mode #subjectModal  [style*="rgba(167,139,250,.45)"] { color: rgba(109,40,217,.6) !important; }
+
+        /* Saving-status text ("saving…") */
+        body.light-mode #strategyModal [style*="rgba(167,139,250,.55)"],
+        body.light-mode #subjectModal  [style*="rgba(167,139,250,.55)"] { color: rgba(109,40,217,.7) !important; }
+
+        /* Keyword chip text */
+        body.light-mode #strategyModal [style*="color:#c4b5fd"],
+        body.light-mode #subjectModal  [style*="color:#c4b5fd"] { color: #5b21b6 !important; }
+
+        /* Keyword chip pill background + border */
+        body.light-mode #strategyModal [style*="background:rgba(139,92,246,.1)"],
+        body.light-mode #subjectModal  [style*="background:rgba(139,92,246,.1)"] {
+            background: rgba(109,40,217,.07) !important;
+            border-color: rgba(109,40,217,.25) !important;
+        }
+
+        /* "default" badge text */
+        body.light-mode #strategyModal [style*="color:rgba(167,139,250,.3)"],
+        body.light-mode #subjectModal  [style*="color:rgba(167,139,250,.3)"] {
+            color: rgba(109,40,217,.45) !important;
+            border-color: rgba(109,40,217,.18) !important;
+        }
+
+        /* Credentials modal — muted description text */
+        body.light-mode #settingsModal [style*="rgba(148,163,184,.55)"],
+        body.light-mode #settingsModal [style*="rgba(148,163,184,.38)"] { color: rgba(30,18,48,.55) !important; }
+        body.light-mode #settingsModal [style*="rgba(148,163,184,.85)"] { color: rgba(30,18,48,.8) !important; }
+
+        /* Row dividers inside modal lists */
+        body.light-mode #strategyModal [style*="border-bottom:1px solid rgba(139,92,246,.07)"],
+        body.light-mode #subjectModal  [style*="border-bottom:1px solid rgba(139,92,246,.07)"] {
+            border-bottom-color: rgba(109,40,217,.08) !important;
+        }
+
+        /* ── Sortable header ──────────────────────────────────────────────────── */
+        thead th[data-sort] { cursor: pointer; user-select: none; }
+        thead th[data-sort]:hover { color: #a78bfa !important; }
+        .sort-ind { margin-left: 4px; font-size: 10px; opacity: .55; }
+
+        /* ── Activity type filter icon ────────────────────────────────────────── */
+        .type-filter-icon {
+            margin-left: 5px;
+            cursor: pointer;
+            display: inline-flex;
+            align-items: center;
+            vertical-align: middle;
+            color: rgba(167,139,250,.3);
+            transition: color .15s;
+        }
+        .type-filter-icon:hover { color: #a78bfa !important; }
+        .type-filter-icon.filter-active { color: #c4b5fd; }
+
+        /* ── Icon images — dark/light filter ─────────────────────────────────── */
+        .icon-img {
+            filter: brightness(0) saturate(100%) invert(72%) sepia(40%) saturate(900%) hue-rotate(217deg) brightness(106%);
+            vertical-align: middle;
+        }
+        body.light-mode .icon-img {
+            filter: brightness(0) saturate(100%) invert(26%) sepia(85%) saturate(1600%) hue-rotate(251deg) brightness(86%);
+        }
+    </style>
+</head>
+<body x-data="credentialsApp()">
+<!-- Flash prevention: runs synchronously before any element paints -->
+<script>try{if(localStorage.getItem('moodleTheme')==='light')document.body.classList.add('light-mode')}catch(_){}</script>
+
+<!-- ── Settings Backdrop + Modal ────────────────────────────────────────────── -->
+<div
+    class="modal-backdrop"
+    x-show="open"
+    x-cloak
+    x-transition:enter="transition-opacity ease-out duration-200"
+    x-transition:enter-start="opacity-0"
+    x-transition:enter-end="opacity-100"
+    x-transition:leave="transition-opacity ease-in duration-150"
+    x-transition:leave-start="opacity-100"
+    x-transition:leave-end="opacity-0"
+    @click.self="open = false"
+    @keydown.escape.window="open = false"
+    style="background:rgba(4,0,10,.88);backdrop-filter:blur(6px)">
+
+    <div id="settingsModal" class="tech-card"
+         style="width:100%;max-width:420px;margin:16px;overflow:hidden"
+         @click.stop>
+
+        <!-- Modal header -->
+        <div style="padding:16px 20px;border-bottom:1px solid rgba(139,92,246,.18);display:flex;align-items:center;justify-content:space-between">
+            <div style="display:flex;align-items:center;gap:8px">
+                <img src="src/icons/settings.svg" width="15" height="15" class="icon-img" alt="">
+                <span class="tech-title" style="font-size:14px;font-weight:700">Credentials</span>
+            </div>
+            <button @click="open = false" class="header-icon-btn" style="width:28px;height:28px;border-radius:6px" title="Close">
+                <svg width="13" height="13" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/>
+                </svg>
+            </button>
+        </div>
+
+        <!-- Modal body -->
+        <div style="padding:20px">
+            <div style="margin-bottom:14px">
+                <label for="modalUrl" style="display:block;font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.07em;color:rgba(167,139,250,.7);margin-bottom:5px">
+                    Server URL
+                </label>
+                <input type="text" id="modalUrl" class="tech-input"
+                    x-model="modalUrl"
+                    placeholder="https://yourmoodle.edu"
+                    autocomplete="off" spellcheck="false">
+            </div>
+            <div style="margin-bottom:14px">
+                <label for="modalToken" style="display:block;font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.07em;color:rgba(167,139,250,.7);margin-bottom:5px">
+                    WS Token
+                </label>
+                <input type="text" id="modalToken" class="tech-input"
+                    x-model="modalToken"
+                    @input="onTokenInput()"
+                    placeholder="Web service token"
+                    autocomplete="off" spellcheck="false">
+                <!-- Live token status -->
+                <div style="margin-top:5px;min-height:16px;font-size:11px">
+                    <span x-show="tokenStatus === 'checking'" x-cloak
+                        style="color:rgba(167,139,250,.6);display:inline-flex;align-items:center;gap:4px">
+                        <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"
+                             style="animation:spin .8s linear infinite;transform-origin:center">
+                            <path stroke-linecap="round" d="M12 2a10 10 0 0110 10"/>
+                        </svg>
+                        Checking…
+                    </span>
+                    <span x-show="tokenStatus === 'valid'"   x-cloak style="color:#34d399">✓ Token valid</span>
+                    <span x-show="tokenStatus === 'invalid'" x-cloak style="color:#f87171">✗ Invalid token</span>
+                    <span x-show="tokenStatus === 'failed'"  x-cloak style="color:rgba(148,163,184,.45)">Could not verify</span>
+                </div>
+            </div>
+            <div style="margin-bottom:8px">
+                <label for="modalCookie" style="display:block;font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.07em;color:rgba(167,139,250,.7);margin-bottom:5px">
+                    Session Cookie
+                </label>
+                <input type="text" id="modalCookie" class="tech-input"
+                    x-model="modalCookie" placeholder="MoodleSession=abc123…"
+                    autocomplete="off" spellcheck="false">
+                <p style="margin-top:5px;font-size:11px;color:rgba(148,163,184,.38)">Session cookie cannot be verified automatically.</p>
+            </div>
+            <p style="font-size:11px;color:rgba(148,163,184,.55);line-height:1.7;margin-bottom:20px">
+                <strong style="color:rgba(148,163,184,.85)">Chrome/Edge:</strong>
+                F12 → Application → Cookies → copy
+                <code style="background:rgba(139,92,246,.1);color:#a78bfa;padding:1px 5px;border-radius:3px">MoodleSession</code> value.<br>
+                <strong style="color:rgba(148,163,184,.85)">Firefox:</strong> F12 → Storage → Cookies.<br>
+                <span style="color:rgba(251,191,36,.75)">⚠ Must be logged in as admin. Session expires on logout.</span>
+            </p>
+            <div style="display:flex;gap:8px">
+                <button @click="saveCreds()" class="tech-btn" style="flex:1">Save</button>
+                <button @click="clearCreds()" class="tech-btn"
+                    style="border-color:rgba(148,163,184,.3);color:rgba(148,163,184,.8);text-shadow:none">
+                    Clear Fields
+                </button>
+            </div>
+        </div>
+
+    </div>
+</div>
+
+<!-- ── Strategy Manager Backdrop + Modal ────────────────────────────────────── -->
+<div
+    class="modal-backdrop"
+    x-show="strategyOpen"
+    x-cloak
+    x-transition:enter="transition-opacity ease-out duration-200"
+    x-transition:enter-start="opacity-0"
+    x-transition:enter-end="opacity-100"
+    x-transition:leave="transition-opacity ease-in duration-150"
+    x-transition:leave-start="opacity-100"
+    x-transition:leave-end="opacity-0"
+    @click.self="strategyOpen = false"
+    @keydown.escape.window="strategyOpen = false"
+    @strategy-close.window="strategyOpen = false"
+    style="background:rgba(4,0,10,.88);backdrop-filter:blur(6px)">
+
+    <div id="strategyModal" class="tech-card" x-data="strategyApp()"
+         style="width:100%;max-width:660px;margin:16px;overflow:hidden;display:flex;flex-direction:column;max-height:calc(100vh - 48px)"
+         @click.stop>
+
+        <!-- Modal header -->
+        <div style="padding:16px 20px;border-bottom:1px solid rgba(139,92,246,.18);display:flex;align-items:center;justify-content:space-between;flex-shrink:0">
+            <div style="display:flex;align-items:center;gap:10px">
+                <img src="src/icons/logs.svg" width="15" height="15" class="icon-img" alt="">
+                <span class="tech-title" style="font-size:14px;font-weight:700">Strategy Manager</span>
+                <span x-show="status === 'saving'" x-cloak style="font-size:11px;color:rgba(167,139,250,.55);font-style:italic">saving…</span>
+                <span x-show="status === 'saved'"  x-cloak style="font-size:11px;color:#34d399">✓ saved</span>
+                <span x-show="status === 'error'"  x-cloak style="font-size:11px;color:#f87171">save failed</span>
+            </div>
+            <button @click="$dispatch('strategy-close')" class="header-icon-btn" style="width:28px;height:28px;border-radius:6px" title="Close">
+                <svg width="13" height="13" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/>
+                </svg>
+            </button>
+        </div>
+
+        <!-- Inline error -->
+        <div x-show="error" x-cloak style="padding:8px 20px;background:rgba(239,68,68,.08);border-bottom:1px solid rgba(239,68,68,.2);display:flex;align-items:center;justify-content:space-between;flex-shrink:0">
+            <span style="font-size:12px;color:#f87171" x-text="error"></span>
+            <button @click="error = ''" style="background:none;border:none;color:rgba(248,113,113,.55);cursor:pointer;font-size:16px;line-height:1;padding:0 0 0 12px">×</button>
+        </div>
+
+        <!-- Add new strategy -->
+        <div style="padding:14px 20px;border-bottom:1px solid rgba(139,92,246,.12);flex-shrink:0">
+            <div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:rgba(167,139,250,.45);margin-bottom:8px">Add Strategy</div>
+            <div style="display:flex;gap:8px;flex-wrap:wrap">
+                <input type="text" class="tech-input" x-model="newStrategyName"
+                    placeholder="Strategy name" style="flex:2;min-width:160px"
+                    @keydown.enter="addStrategy()">
+                <input type="text" class="tech-input" x-model="newStrategyKeyword"
+                    placeholder="First keyword (optional)" style="flex:2;min-width:160px"
+                    @keydown.enter="addStrategy()">
+                <button @click="addStrategy()" class="tech-btn" style="padding:8px 16px;white-space:nowrap">+ Add</button>
+            </div>
+        </div>
+
+        <!-- Strategies list — scrollable -->
+        <div style="overflow-y:auto;flex:1">
+            <template x-for="strategy in strategies" :key="strategy.name">
+                <div style="padding:10px 20px;border-bottom:1px solid rgba(139,92,246,.07)">
+
+                    <!-- Name row -->
+                    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px">
+                        <span style="font-size:13px;font-weight:600;color:#ede9fe" x-text="strategy.name"></span>
+                        <template x-if="!strategy.isDefault">
+                            <button @click="deleteStrategy(strategy.name)"
+                                style="padding:2px 8px;font-size:11px;background:rgba(239,68,68,.07);color:#f87171;border:1px solid rgba(239,68,68,.18);border-radius:6px;cursor:pointer"
+                                onmouseover="this.style.background='rgba(239,68,68,.18)'"
+                                onmouseout="this.style.background='rgba(239,68,68,.07)'">× Remove</button>
+                        </template>
+                        <template x-if="strategy.isDefault">
+                            <span style="font-size:10px;color:rgba(167,139,250,.3);padding:2px 8px;border:1px solid rgba(139,92,246,.1);border-radius:6px">default</span>
+                        </template>
+                    </div>
+
+                    <!-- Keywords -->
+                    <div style="display:flex;flex-wrap:wrap;align-items:center;gap:5px">
+                        <template x-for="kw in strategy.keywords" :key="kw">
+                            <span style="display:inline-flex;align-items:center;gap:3px;background:rgba(139,92,246,.1);color:#c4b5fd;font-size:11px;border:1px solid rgba(139,92,246,.22);border-radius:99px;padding:2px 4px 2px 9px">
+                                <span x-text="kw"></span>
+                                <button @click="removeKeyword(strategy.name, kw)"
+                                    style="background:none;border:none;cursor:pointer;color:rgba(196,181,253,.4);font-size:13px;line-height:1;padding:0 3px"
+                                    onmouseover="this.style.color='#f87171'"
+                                    onmouseout="this.style.color='rgba(196,181,253,.4)'">×</button>
+                            </span>
+                        </template>
+                        <input type="text"
+                            :value="keywordInputs[strategy.name] || ''"
+                            @input="keywordInputs[strategy.name] = $event.target.value"
+                            @keydown.enter="addKeyword(strategy.name)"
+                            placeholder="+ keyword"
+                            class="tech-input"
+                            style="width:110px;padding:2px 8px;font-size:11px;height:24px">
+                        <button @click="addKeyword(strategy.name)"
+                            style="padding:2px 10px;font-size:11px;background:rgba(139,92,246,.09);color:#a78bfa;border:1px solid rgba(139,92,246,.22);border-radius:6px;cursor:pointer"
+                            onmouseover="this.style.background='rgba(139,92,246,.2)'"
+                            onmouseout="this.style.background='rgba(139,92,246,.09)'">Add</button>
+                    </div>
+
+                </div>
+            </template>
+        </div>
+
+    </div>
+</div>
+
+<!-- ── Subject Manager Backdrop + Modal ─────────────────────────────────────── -->
+<div
+    class="modal-backdrop"
+    x-show="subjectOpen"
+    x-cloak
+    x-transition:enter="transition-opacity ease-out duration-200"
+    x-transition:enter-start="opacity-0"
+    x-transition:enter-end="opacity-100"
+    x-transition:leave="transition-opacity ease-in duration-150"
+    x-transition:leave-start="opacity-100"
+    x-transition:leave-end="opacity-0"
+    @click.self="subjectOpen = false"
+    @keydown.escape.window="subjectOpen = false"
+    @subject-close.window="subjectOpen = false"
+    style="background:rgba(4,0,10,.88);backdrop-filter:blur(6px)">
+
+    <div id="subjectModal" class="tech-card" x-data="subjectApp()"
+         style="width:100%;max-width:660px;margin:16px;overflow:hidden;display:flex;flex-direction:column;max-height:calc(100vh - 48px)"
+         @click.stop>
+
+        <!-- Modal header -->
+        <div style="padding:16px 20px;border-bottom:1px solid rgba(139,92,246,.18);display:flex;align-items:center;justify-content:space-between;flex-shrink:0">
+            <div style="display:flex;align-items:center;gap:10px">
+                <img src="src/icons/notebook.svg" width="15" height="15" class="icon-img" alt="">
+                <span class="tech-title" style="font-size:14px;font-weight:700">Subject Manager</span>
+                <span x-show="status === 'saving'" x-cloak style="font-size:11px;color:rgba(167,139,250,.55);font-style:italic">saving…</span>
+                <span x-show="status === 'saved'"  x-cloak style="font-size:11px;color:#34d399">✓ saved</span>
+                <span x-show="status === 'error'"  x-cloak style="font-size:11px;color:#f87171">save failed</span>
+            </div>
+            <button @click="$dispatch('subject-close')" class="header-icon-btn" style="width:28px;height:28px;border-radius:6px" title="Close">
+                <svg width="13" height="13" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/>
+                </svg>
+            </button>
+        </div>
+
+        <!-- Inline error -->
+        <div x-show="error" x-cloak style="padding:8px 20px;background:rgba(239,68,68,.08);border-bottom:1px solid rgba(239,68,68,.2);display:flex;align-items:center;justify-content:space-between;flex-shrink:0">
+            <span style="font-size:12px;color:#f87171" x-text="error"></span>
+            <button @click="error = ''" style="background:none;border:none;color:rgba(248,113,113,.55);cursor:pointer;font-size:16px;line-height:1;padding:0 0 0 12px">×</button>
+        </div>
+
+        <!-- Add new subject -->
+        <div style="padding:14px 20px;border-bottom:1px solid rgba(139,92,246,.12);flex-shrink:0">
+            <div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:rgba(167,139,250,.45);margin-bottom:8px">Add Subject</div>
+            <div style="display:flex;gap:8px;flex-wrap:wrap">
+                <input type="text" class="tech-input" x-model="newSubjectName"
+                    placeholder="Subject name" style="flex:2;min-width:160px"
+                    @keydown.enter="addSubject()">
+                <input type="text" class="tech-input" x-model="newSubjectKeyword"
+                    placeholder="First keyword (optional)" style="flex:2;min-width:160px"
+                    @keydown.enter="addSubject()">
+                <button @click="addSubject()" class="tech-btn" style="padding:8px 16px;white-space:nowrap">+ Add</button>
+            </div>
+        </div>
+
+        <!-- Subjects list — scrollable -->
+        <div style="overflow-y:auto;flex:1">
+            <template x-for="subject in subjects" :key="subject.name">
+                <div style="padding:10px 20px;border-bottom:1px solid rgba(139,92,246,.07)">
+
+                    <!-- Name row -->
+                    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px">
+                        <span style="font-size:13px;font-weight:600;color:#ede9fe" x-text="subject.name"></span>
+                        <template x-if="!subject.isDefault">
+                            <button @click="deleteSubject(subject.name)"
+                                style="padding:2px 8px;font-size:11px;background:rgba(239,68,68,.07);color:#f87171;border:1px solid rgba(239,68,68,.18);border-radius:6px;cursor:pointer"
+                                onmouseover="this.style.background='rgba(239,68,68,.18)'"
+                                onmouseout="this.style.background='rgba(239,68,68,.07)'">× Remove</button>
+                        </template>
+                        <template x-if="subject.isDefault">
+                            <span style="font-size:10px;color:rgba(167,139,250,.3);padding:2px 8px;border:1px solid rgba(139,92,246,.1);border-radius:6px">default</span>
+                        </template>
+                    </div>
+
+                    <!-- Keywords -->
+                    <div style="display:flex;flex-wrap:wrap;align-items:center;gap:5px">
+                        <template x-for="kw in subject.keywords" :key="kw">
+                            <span style="display:inline-flex;align-items:center;gap:3px;background:rgba(139,92,246,.1);color:#c4b5fd;font-size:11px;border:1px solid rgba(139,92,246,.22);border-radius:99px;padding:2px 4px 2px 9px">
+                                <span x-text="kw"></span>
+                                <button @click="removeKeyword(subject.name, kw)"
+                                    style="background:none;border:none;cursor:pointer;color:rgba(196,181,253,.4);font-size:13px;line-height:1;padding:0 3px"
+                                    onmouseover="this.style.color='#f87171'"
+                                    onmouseout="this.style.color='rgba(196,181,253,.4)'">×</button>
+                            </span>
+                        </template>
+                        <input type="text"
+                            :value="keywordInputs[subject.name] || ''"
+                            @input="keywordInputs[subject.name] = $event.target.value"
+                            @keydown.enter="addKeyword(subject.name)"
+                            placeholder="+ keyword"
+                            class="tech-input"
+                            style="width:110px;padding:2px 8px;font-size:11px;height:24px">
+                        <button @click="addKeyword(subject.name)"
+                            style="padding:2px 10px;font-size:11px;background:rgba(139,92,246,.09);color:#a78bfa;border:1px solid rgba(139,92,246,.22);border-radius:6px;cursor:pointer"
+                            onmouseover="this.style.background='rgba(139,92,246,.2)'"
+                            onmouseout="this.style.background='rgba(139,92,246,.09)'">Add</button>
+                    </div>
+
+                </div>
+            </template>
+        </div>
+
+    </div>
+</div>
+
+<!-- ── Header ────────────────────────────────────────────────────────────────── -->
+<header style="position:relative;z-index:10;background:rgba(7,0,15,.9);backdrop-filter:blur(12px);border-bottom:1px solid rgba(139,92,246,.18);padding:0 24px">
+    <div style="max-width:1280px;margin:0 auto;height:56px;display:flex;align-items:center;justify-content:space-between">
+
+        <!-- Logo + title -->
+        <div style="display:flex;align-items:center;gap:12px">
+            <div style="width:32px;height:32px;background:rgba(139,92,246,.12);border:1px solid rgba(139,92,246,.4);border-radius:8px;display:flex;align-items:center;justify-content:center;flex-shrink:0;box-shadow:0 0 14px rgba(109,40,217,.2)">
+                <svg width="16" height="16" fill="none" stroke="#a78bfa" stroke-width="2" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M9 17v-2m3 2v-4m3 4v-6M5 17h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z"/>
+                </svg>
+            </div>
+            <div>
+                <div class="tech-title" style="font-size:14px;font-weight:700;line-height:1.2">Moodle Activity Report</div>
+                <div style="font-size:11px;color:rgba(148,163,184,.5)">Course module creation log &bull; Dates in MM/DD/YYYY</div>
+            </div>
+        </div>
+
+        <!-- Right: theme toggle + gear -->
+        <div style="display:flex;align-items:center;gap:8px">
+
+            <!-- Theme toggle button -->
+            <button @click="toggleTheme()"
+                class="header-icon-btn"
+                :title="darkMode ? 'Switch to light mode' : 'Switch to dark mode'">
+                <!-- Sun — visible in dark mode, click to go light -->
+                <img x-show="darkMode" src="src/icons/sun.svg" width="16" height="16" class="icon-img" alt="">
+                <!-- Moon — visible in light mode, click to go dark -->
+                <img x-show="!darkMode" x-cloak src="src/icons/moon.svg" width="16" height="16" class="icon-img" alt="">
+            </button>
+
+            <!-- Subject Manager button -->
+            <button @click="subjectOpen = true" class="tech-btn" style="padding:6px 12px;display:inline-flex;align-items:center;justify-content:center" title="Manage subjects">
+                <img src="src/icons/notebook.svg" width="16" height="16" class="icon-img" alt="">
+            </button>
+
+            <!-- Strategy Manager button -->
+            <button @click="strategyOpen = true" class="tech-btn" style="padding:6px 12px;display:inline-flex;align-items:center;justify-content:center" title="Manage strategies">
+                <img src="src/icons/logs.svg" width="16" height="16" class="icon-img" alt="">
+            </button>
+
+            <!-- Gear button -->
+            <div style="position:relative">
+                <button @click="open = true" class="header-icon-btn" title="Set credentials">
+                    <img src="src/icons/settings.svg" width="16" height="16" class="icon-img" alt="">
+                </button>
+                <!-- Saved indicator dot -->
+                <span x-show="hasCreds" x-cloak
+                    style="position:absolute;top:4px;right:4px;width:8px;height:8px;background:#a78bfa;border-radius:50%;border:2px solid #07000f;pointer-events:none;box-shadow:0 0 6px #a78bfa">
+                </span>
+            </div>
+
+        </div>
+    </div>
+</header>
+
+<!-- ── Main ──────────────────────────────────────────────────────────────────── -->
+<main style="position:relative;z-index:1;max-width:1280px;margin:0 auto;padding:24px">
+
+    <!-- Config card -->
+    <div class="tech-card" style="padding:20px 24px;margin-bottom:16px">
+
+        <!-- Hidden inputs — read by app.js, populated from localStorage on load -->
+        <input type="hidden" id="wsToken">
+        <input type="hidden" id="sessionKey">
+
+        <div>
+            <label for="courseUrl" style="display:block;font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.07em;color:rgba(167,139,250,.7);margin-bottom:5px">
+                Course URL
+            </label>
+            <textarea id="courseUrl" rows="3" class="tech-input" style="font-family:monospace"
+                placeholder="https://yourmoodle.edu/course/view.php?id=2&#10;One URL per line for multiple courses"></textarea>
+            <button id="fetchBtn" class="tech-btn" style="width:100%;margin-top:8px">Generate</button>
+        </div>
+
+        <!-- Status message -->
+        <div id="statusMessage" style="margin-top:12px;padding:10px 14px;border-radius:8px;background:rgba(139,92,246,.06);border-left:3px solid rgba(139,92,246,.5);font-size:13px;color:rgba(196,181,253,.85)">
+            Enter course URL and click Generate Report.
+        </div>
+
+        <!-- Progress bar -->
+        <div id="progressWrap" style="display:none;margin-top:12px">
+            <div style="display:flex;justify-content:space-between;font-size:11px;color:rgba(148,163,184,.55);margin-bottom:5px">
+                <span id="progressLabel">Fetching logs…</span>
+                <span id="progressPct">0%</span>
+            </div>
+            <div style="width:100%;background:rgba(139,92,246,.12);border-radius:99px;height:4px">
+                <div id="progressBar" style="width:0%;background:#a78bfa;height:4px;border-radius:99px;transition:width .3s;box-shadow:0 0 8px rgba(139,92,246,.7)"></div>
+            </div>
+        </div>
+
+    </div>
+
+    <!-- CORS notice -->
+    <div id="corsNotice" style="display:none;background:rgba(251,191,36,.06);border:1px solid rgba(251,191,36,.3);border-radius:12px;padding:16px 20px;margin-bottom:16px">
+        <p style="font-size:13px;font-weight:600;color:#fbbf24;margin-bottom:6px">⚠ Browser blocked the log page request (CORS)</p>
+        <p style="font-size:13px;color:rgba(251,191,36,.8);margin-bottom:6px">Cross-origin restrictions prevent fetching log pages directly. Options:</p>
+        <ul style="font-size:13px;color:rgba(251,191,36,.8);padding-left:18px;line-height:1.8">
+            <li>Upload this file to your Moodle server and open it from there</li>
+            <li>Use a browser extension like <strong>CORS Unblock</strong> (testing only)</li>
+        </ul>
+    </div>
+
+    <!-- Results card -->
+    <div class="tech-card" style="overflow:hidden">
+
+        <!-- Course name banner -->
+        <div id="courseNameSection" style="display:none;padding:12px 24px;background:rgba(139,92,246,.05);border-bottom:1px solid rgba(139,92,246,.16)">
+            <div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:rgba(167,139,250,.6);margin-bottom:3px">Course</div>
+            <a id="courseNameDisplay" href="#" target="_blank" rel="noopener"
+               style="font-size:16px;font-weight:700;color:#ede9fe;text-decoration:none"></a>
+        </div>
+
+        <!-- Tab bar + toolbar -->
+        <div style="border-bottom:1px solid rgba(139,92,246,.16);padding:0 24px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px">
+
+            <!-- Tabs -->
+            <div style="display:flex">
+                <button id="tabAll"
+                    style="display:flex;align-items:center;gap:8px;padding:14px 20px 14px 16px;font-size:13px;font-weight:600;color:#a78bfa;border:none;background:none;cursor:pointer;border-bottom:2px solid #a78bfa;margin-bottom:-1px;text-shadow:0 0 8px rgba(139,92,246,.5)">
+                    All
+                    <span id="countAll" style="background:rgba(139,92,246,.14);color:#a78bfa;font-size:11px;font-weight:700;padding:1px 8px;border-radius:99px;border:1px solid rgba(139,92,246,.3)">0</span>
+                </button>
+                <button id="tabTeachers"
+                    style="display:flex;align-items:center;gap:8px;padding:14px 20px 14px 16px;font-size:13px;font-weight:600;color:rgba(148,163,184,.45);border:none;background:none;cursor:pointer;border-bottom:2px solid transparent;margin-bottom:-1px">
+                    Teachers Creation
+                    <span id="countTeachers" style="background:rgba(148,163,184,.08);color:rgba(148,163,184,.45);font-size:11px;font-weight:700;padding:1px 8px;border-radius:99px;border:1px solid rgba(148,163,184,.14)">0</span>
+                </button>
+                <button id="tabOer"
+                    style="display:flex;align-items:center;gap:8px;padding:14px 20px 14px 16px;font-size:13px;font-weight:600;color:rgba(148,163,184,.45);border:none;background:none;cursor:pointer;border-bottom:2px solid transparent;margin-bottom:-1px">
+                    OER
+                    <span id="countOer" style="background:rgba(148,163,184,.08);color:rgba(148,163,184,.45);font-size:11px;font-weight:700;padding:1px 8px;border-radius:99px;border:1px solid rgba(148,163,184,.14)">0</span>
+                </button>
+            </div>
+
+            <!-- Toolbar -->
+            <div style="display:flex;align-items:center;gap:8px;padding:8px 0">
+
+                <!-- Download -->
+                <button id="downloadBtn" class="tech-btn"
+                    style="display:inline-flex;align-items:center;gap:6px;padding:6px 14px;font-size:12px;opacity:0.35;pointer-events:none"
+                    disabled>
+                    <img src="src/icons/download.svg" width="13" height="13" class="icon-img" alt="">
+                    Download CSV
+                </button>
+
+                <!-- Reset Table -->
+                <button id="resetBtn" class="tech-btn" title="Reset to default view"
+                    style="display:inline-flex;align-items:center;justify-content:center;padding:6px 10px">
+                    <img src="src/icons/list-reset.svg" width="13" height="13" class="icon-img" alt="">
+                </button>
+
+                <!-- Row count -->
+                <span id="rowCount" style="font-size:12px;font-weight:600;color:rgba(148,163,184,.45);background:rgba(148,163,184,.04);border:1px solid rgba(148,163,184,.12);padding:5px 12px;border-radius:8px">0 entries</span>
+
+            </div>
+        </div>
+
+        <!-- Table -->
+        <div style="overflow-x:auto">
+            <table style="width:100%;border-collapse:collapse">
+                <thead>
+                    <tr style="background:rgba(139,92,246,.04);border-bottom:1px solid rgba(139,92,246,.14)">
+                        <th style="padding:10px 16px;text-align:left;font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.07em;color:rgba(167,139,250,.55);white-space:nowrap">#</th>
+                        <th data-sort="rawTs" style="padding:10px 16px;text-align:left;font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.07em;color:rgba(167,139,250,.55);white-space:nowrap">Date<span class="sort-ind">⇅</span></th>
+                        <th data-sort="fullname" style="padding:10px 16px;text-align:left;font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.07em;color:rgba(167,139,250,.55)">User<span class="sort-ind">⇅</span></th>
+                        <th data-sort="activityType" style="padding:10px 16px;text-align:left;font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.07em;color:rgba(167,139,250,.55);white-space:nowrap">Activity Type<span class="sort-ind">⇅</span><span id="typeFilterIcon" class="type-filter-icon" title="Filter by activity type"><svg width="11" height="11" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M3 6h18M6 12h12M10 18h4"/></svg></span></th>
+                        <th data-sort="activityName" style="padding:10px 16px;text-align:left;font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.07em;color:rgba(167,139,250,.55)">Activity Name<span class="sort-ind">⇅</span></th>
+                        <th data-sort="subject" style="padding:10px 16px;text-align:left;font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.07em;color:rgba(167,139,250,.55);white-space:nowrap">Subject<span class="sort-ind">⇅</span></th>
+                        <th id="thStrategy" style="padding:10px 16px;text-align:left;font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.07em;color:rgba(167,139,250,.55);white-space:nowrap">Strategy</th>
+                        <th style="padding:10px 16px;text-align:center;font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.07em;color:rgba(167,139,250,.55);white-space:nowrap" title="Logs">
+                            <img src="src/icons/external-link.svg" width="13" height="13" class="icon-img" style="opacity:0.55;display:block;margin:0 auto" alt="">
+                        </th>
+                    </tr>
+                </thead>
+                <tbody id="reportTbody">
+                    <tr>
+                        <td colspan="8" style="text-align:center;padding:64px 20px;color:rgba(148,163,184,.35);font-size:13px;font-style:italic">
+                            No data yet. Enter course URL(s) and click Generate Report.
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+
+    </div>
+
+    <!-- Footer -->
+    <div style="text-align:center;font-size:11px;color:rgba(148,163,184,.35);padding:16px 0;display:flex;align-items:center;justify-content:center;gap:12px;flex-wrap:wrap">
+        <span>Date &amp; creator parsed from Moodle log pages</span>
+        <span style="display:inline-flex;align-items:center;gap:5px">
+            <span style="width:7px;height:7px;border-radius:50%;background:#34d399;display:inline-block;box-shadow:0 0 5px #34d399"></span>
+            VERIFIED = Course module created event
+        </span>
+        <span style="display:inline-flex;align-items:center;gap:5px">
+            <span style="width:7px;height:7px;border-radius:50%;background:#fb923c;display:inline-block;box-shadow:0 0 5px #fb923c"></span>
+            INFERRED = oldest log event
+        </span>
+        <span style="display:inline-flex;align-items:center;gap:5px">
+            <span style="width:7px;height:7px;border-radius:50%;background:#fbbf24;display:inline-block;box-shadow:0 0 5px #fbbf24"></span>
+            EST = fallback (mod.added / timecreated)
+        </span>
+    </div>
+
+</main>
+
+<!-- ── Alpine component ───────────────────────────────────────────────────────── -->
+<script>
+function credentialsApp() {
+    return {
+        open:         false,
+        strategyOpen: false,
+        subjectOpen:  false,
+        modalToken:   '',
+        modalCookie:  '',
+        modalUrl:     '',
+        hasCreds:     false,
+        darkMode:     true,
+        LS_KEY:       'moodleCredentials',
+        tokenStatus:  '',   // '' | 'checking' | 'valid' | 'invalid' | 'failed'
+        tokenTimer:   null,
+
+        init() {
+            // Theme
+            this.darkMode = localStorage.getItem('moodleTheme') !== 'light';
+            document.body.classList.toggle('light-mode', !this.darkMode);
+
+            // Credentials
+            const creds = this._load();
+            if (creds) {
+                this.modalToken  = creds.token  || '';
+                this.modalCookie = creds.cookie || '';
+                this.modalUrl    = creds.url    || '';
+                this._apply(creds.token, creds.cookie);
+                if (creds.url) this._applyUrl(creds.url);
+            }
+            this.hasCreds = !!(creds && (creds.token || creds.cookie));
+            if (!this.hasCreds) {
+                document.getElementById('statusMessage').textContent =
+                    'Click ⚙ to set your WS Token & Session Cookie, then enter the course URL and click Generate Report.';
+            }
+
+            // Pre-fill course URL value from saved server URL, or use fallback
+            const urlInput = document.getElementById('courseUrl');
+            if (urlInput && !urlInput.value) {
+                const savedUrl = creds?.url?.replace(/\/$/, '');
+                urlInput.value = savedUrl
+                    ? `${savedUrl}/course/view.php?id=`
+                    : 'https://uslt.aralinks.com/course/view.php?id=2';
+            }
+
+            // Reload saved credentials into the modal fields every time it opens
+            this.$watch('open', val => {
+                if (!val) return;
+                const saved = this._load();
+                this.modalToken  = saved?.token  || '';
+                this.modalCookie = saved?.cookie || '';
+                this.modalUrl    = saved?.url    || '';
+                this.tokenStatus = '';
+            });
+        },
+
+        toggleTheme() {
+            this.darkMode = !this.darkMode;
+            localStorage.setItem('moodleTheme', this.darkMode ? 'dark' : 'light');
+            document.body.classList.toggle('light-mode', !this.darkMode);
+        },
+
+        _load() {
+            try {
+                const raw = localStorage.getItem(this.LS_KEY);
+                return raw ? JSON.parse(atob(raw)) : null;
+            } catch (_) { return null; }
+        },
+
+        _apply(token, cookie) {
+            document.getElementById('wsToken').value    = token  || '';
+            document.getElementById('sessionKey').value = cookie || '';
+        },
+
+        _applyUrl(url) {
+            const el = document.getElementById('courseUrl');
+            if (el && url) el.placeholder = `${url}/course/view.php?id=\nOne URL per line for multiple courses`;
+        },
+
+        saveCreds() {
+            const token  = this.modalToken.trim();
+            const cookie = this.modalCookie.trim();
+            const url    = this.modalUrl.trim().replace(/\/$/, '');
+            localStorage.setItem(this.LS_KEY, btoa(JSON.stringify({ token, cookie, url })));
+            this._apply(token, cookie);
+            if (url) this._applyUrl(url);
+            this.hasCreds = !!(token || cookie);
+            this.open = false;
+            const el = document.getElementById('statusMessage');
+            el.textContent = 'Credentials saved. Enter course URL and click Generate Report.';
+            el.style.cssText = 'margin-top:12px;padding:10px 14px;border-radius:8px;background:rgba(52,211,153,.08);border-left:3px solid #34d399;font-size:13px;color:#34d399';
+        },
+
+        clearCreds() {
+            this.modalToken  = '';
+            this.modalCookie = '';
+            this.modalUrl    = '';
+        },
+
+        onTokenInput() {
+            clearTimeout(this.tokenTimer);
+            this.tokenStatus = '';
+            this.tokenTimer = setTimeout(() => this.validateToken(), 800);
+        },
+
+        async validateToken() {
+            const token = this.modalToken.trim();
+            const serverUrl = this.modalUrl.trim();
+            if (!token || !serverUrl) { this.tokenStatus = ''; return; }
+            let baseUrl;
+            try { new URL(serverUrl); baseUrl = serverUrl.replace(/\/$/, ''); } catch { this.tokenStatus = ''; return; }
+            this.tokenStatus = 'checking';
+            try {
+                const params = new URLSearchParams({
+                    wstoken: token,
+                    wsfunction: 'core_webservice_get_site_info',
+                    moodlewsrestformat: 'json',
+                });
+                const targetUrl = `${baseUrl}/webservice/rest/server.php?${params}`;
+                const res  = await fetch(apiProxyUrl(targetUrl));
+                const data = await res.json();
+                if (data?.exception || data?.error || data?.errorcode) {
+                    this.tokenStatus = 'invalid';
+                } else if (data?.sitename || data?.siteurl) {
+                    this.tokenStatus = 'valid';
+                } else {
+                    this.tokenStatus = 'invalid';
+                }
+            } catch {
+                this.tokenStatus = 'failed';
+            }
+        }
+    };
+}
+</script>
+
+<script>
+function strategyApp() {
+  return {
+    open: false,
+    strategies: [],
+    newStrategyName: '',
+    newStrategyKeyword: '',
+    keywordInputs: {},
+    status: '',
+    error: '',
+
+    async init() {
+      const res = await fetch('/strategies');
+      const data = await res.json();
+      this.strategies = data.strategies || [];
+    },
+
+    isKeywordDuplicate(keyword, excludeStrategyName = null) {
+      const kw = keyword.trim().toLowerCase();
+      for (const s of this.strategies) {
+        if (s.name === excludeStrategyName) continue;
+        if (s.keywords.map(k => k.toLowerCase()).includes(kw)) {
+          return s.name;
+        }
+      }
+      return null;
+    },
+
+    async addKeyword(strategyName) {
+      const kw = (this.keywordInputs[strategyName] || '').trim();
+      if (!kw) return;
+      const owner = this.isKeywordDuplicate(kw);
+      if (owner) {
+        this.error = `"${kw}" is already used by "${owner}"`;
+        return;
+      }
+      this.error = '';
+      const s = this.strategies.find(s => s.name === strategyName);
+      if (s) s.keywords.push(kw);
+      this.keywordInputs[strategyName] = '';
+      await this.save();
+    },
+
+    removeKeyword(strategyName, keyword) {
+      const s = this.strategies.find(s => s.name === strategyName);
+      if (s) s.keywords = s.keywords.filter(k => k !== keyword);
+      this.save();
+    },
+
+    async addStrategy() {
+      const name = this.newStrategyName.trim();
+      const kw   = this.newStrategyKeyword.trim();
+      if (!name) return;
+      if (this.strategies.find(s => s.name.toLowerCase() === name.toLowerCase())) {
+        this.error = `Strategy "${name}" already exists.`;
+        return;
+      }
+      if (kw) {
+        const owner = this.isKeywordDuplicate(kw);
+        if (owner) {
+          this.error = `"${kw}" is already used by "${owner}"`;
+          return;
+        }
+      }
+      this.error = '';
+      this.strategies.push({
+        name,
+        keywords: kw ? [kw] : [],
+        isDefault: false
+      });
+      this.newStrategyName = '';
+      this.newStrategyKeyword = '';
+      await this.save();
+    },
+
+    deleteStrategy(strategyName) {
+      const s = this.strategies.find(s => s.name === strategyName);
+      if (s && s.isDefault) return;
+      this.strategies = this.strategies.filter(s => s.name !== strategyName);
+      this.save();
+    },
+
+    async save() {
+      this.status = 'saving';
+      try {
+        await fetch('/strategies', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ strategies: this.strategies })
+        });
+        this.status = 'saved';
+        window.dispatchEvent(new CustomEvent('strategies-updated'));
+        setTimeout(() => this.status = '', 2000);
+      } catch (e) {
+        this.status = 'error';
+      }
+    }
+  };
+}
+</script>
+
+<script>
+function subjectApp() {
+  return {
+    subjects: [],
+    newSubjectName: '',
+    newSubjectKeyword: '',
+    keywordInputs: {},
+    status: '',
+    error: '',
+
+    async init() {
+      const res = await fetch('/subjects');
+      const data = await res.json();
+      this.subjects = data.subjects || [];
+    },
+
+    isKeywordDuplicate(keyword, excludeSubjectName = null) {
+      const kw = keyword.trim().toLowerCase();
+      for (const s of this.subjects) {
+        if (s.name === excludeSubjectName) continue;
+        if (s.keywords.map(k => k.toLowerCase()).includes(kw)) return s.name;
+      }
+      return null;
+    },
+
+    async addKeyword(subjectName) {
+      const kw = (this.keywordInputs[subjectName] || '').trim();
+      if (!kw) return;
+      const owner = this.isKeywordDuplicate(kw);
+      if (owner) { this.error = `"${kw}" is already used by "${owner}"`; return; }
+      this.error = '';
+      const s = this.subjects.find(s => s.name === subjectName);
+      if (s) s.keywords.push(kw);
+      this.keywordInputs[subjectName] = '';
+      await this.save();
+    },
+
+    removeKeyword(subjectName, keyword) {
+      const s = this.subjects.find(s => s.name === subjectName);
+      if (s) s.keywords = s.keywords.filter(k => k !== keyword);
+      this.save();
+    },
+
+    async addSubject() {
+      const name = this.newSubjectName.trim();
+      const kw   = this.newSubjectKeyword.trim();
+      if (!name) return;
+      if (this.subjects.find(s => s.name.toLowerCase() === name.toLowerCase())) {
+        this.error = `Subject "${name}" already exists.`; return;
+      }
+      if (kw) {
+        const owner = this.isKeywordDuplicate(kw);
+        if (owner) { this.error = `"${kw}" is already used by "${owner}"`; return; }
+      }
+      this.error = '';
+      this.subjects.push({ name, keywords: kw ? [kw] : [], isDefault: false });
+      this.newSubjectName = '';
+      this.newSubjectKeyword = '';
+      await this.save();
+    },
+
+    deleteSubject(subjectName) {
+      const s = this.subjects.find(s => s.name === subjectName);
+      if (s && s.isDefault) return;
+      this.subjects = this.subjects.filter(s => s.name !== subjectName);
+      this.save();
+    },
+
+    async save() {
+      this.status = 'saving';
+      try {
+        await fetch('/subjects', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ subjects: this.subjects })
+        });
+        this.status = 'saved';
+        window.dispatchEvent(new CustomEvent('subjects-updated'));
+        setTimeout(() => this.status = '', 2000);
+      } catch {
+        this.status = 'error';
+      }
+    }
+  };
+}
+</script>
+
+<script src="app.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+</body>
+</html>

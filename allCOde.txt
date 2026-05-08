@@ -1,0 +1,4866 @@
+<files>
+<file name="src\input.css">
+<![CDATA[
+@import "tailwindcss";
+@source "../index.html";
+@source "../app.js";
+
+/* ── Modal overlay ─────────────────────────────────────────────────────────── */
+.modal-overlay {
+    background: rgba(4,0,10,.88);
+    backdrop-filter: blur(6px);
+}
+
+/* ── Modal cards ────────────────────────────────────────────────────────────── */
+.modal-card-sm {
+    width: 100%;
+    max-width: 420px;
+    margin: 16px;
+    overflow: hidden;
+}
+.modal-card-lg {
+    width: 100%;
+    max-width: 660px;
+    margin: 16px;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    max-height: calc(100vh - 48px);
+}
+
+/* ── Modal header ───────────────────────────────────────────────────────────── */
+.modal-header {
+    padding: 16px 20px;
+    border-bottom: 1px solid rgba(139,92,246,.18);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-shrink: 0;
+}
+.modal-title-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+.modal-title-row-lg {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+.modal-title {
+    font-size: 14px;
+    font-weight: 700;
+}
+.modal-close-btn {
+    width: 28px !important;
+    height: 28px !important;
+    border-radius: 6px !important;
+    padding: 0 !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+}
+
+/* ── Modal body ─────────────────────────────────────────────────────────────── */
+.modal-label {
+    display: block;
+    font-size: 11px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: .07em;
+    color: rgba(167,139,250,.7);
+    margin-bottom: 5px;
+}
+body.light-mode .modal-label { color: rgba(109,40,217,.65); }
+
+.modal-token-status {
+    margin-top: 5px;
+    min-height: 16px;
+    font-size: 11px;
+}
+.token-checking {
+    color: rgba(167,139,250,.6);
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+}
+.spin-icon {
+    animation: spin .8s linear infinite;
+    transform-origin: center;
+}
+.field-hint {
+    margin-top: 5px;
+    font-size: 11px;
+    color: rgba(148,163,184,.38);
+}
+body.light-mode .field-hint { color: rgba(30,18,48,.55) !important; }
+
+.creds-help-text {
+    font-size: 11px;
+    color: rgba(148,163,184,.55);
+    line-height: 1.7;
+    margin-bottom: 20px;
+}
+body.light-mode .creds-help-text { color: rgba(30,18,48,.55) !important; }
+
+.creds-help-strong {
+    color: rgba(148,163,184,.85);
+}
+body.light-mode .creds-help-strong { color: rgba(30,18,48,.8) !important; }
+
+.code-chip {
+    background: rgba(139,92,246,.1);
+    color: #a78bfa;
+    padding: 1px 5px;
+    border-radius: 3px;
+}
+.modal-footer-btns {
+    display: flex;
+    gap: 8px;
+}
+.btn-muted {
+    border-color: rgba(148,163,184,.3) !important;
+    color: rgba(148,163,184,.8) !important;
+    text-shadow: none !important;
+}
+
+/* ── Modal manager status indicators ────────────────────────────────────────── */
+.modal-status-saving {
+    font-size: 11px;
+    color: rgba(167,139,250,.55);
+    font-style: italic;
+}
+body.light-mode .modal-status-saving { color: rgba(109,40,217,.7); }
+
+.modal-status-saved {
+    font-size: 11px;
+    color: #34d399;
+}
+.modal-status-error {
+    font-size: 11px;
+    color: #f87171;
+}
+
+/* ── Modal error bar ────────────────────────────────────────────────────────── */
+.modal-error-bar {
+    padding: 8px 20px;
+    background: rgba(239,68,68,.08);
+    border-bottom: 1px solid rgba(239,68,68,.2);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-shrink: 0;
+}
+.modal-error-text {
+    font-size: 12px;
+    color: #f87171;
+}
+.modal-error-dismiss {
+    background: none;
+    border: none;
+    color: rgba(248,113,113,.55);
+    cursor: pointer;
+    font-size: 16px;
+    line-height: 1;
+    padding: 0 0 0 12px;
+}
+
+/* ── Modal manager list sections ────────────────────────────────────────────── */
+.modal-add-section {
+    padding: 14px 20px;
+    border-bottom: 1px solid rgba(139,92,246,.12);
+    flex-shrink: 0;
+}
+.modal-section-label {
+    font-size: 10px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: .08em;
+    color: rgba(167,139,250,.45);
+    margin-bottom: 8px;
+}
+body.light-mode .modal-section-label { color: rgba(109,40,217,.6); }
+
+.modal-add-row {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+}
+.modal-add-input {
+    flex: 2;
+    min-width: 160px;
+}
+.btn-add {
+    padding: 8px 16px;
+    white-space: nowrap;
+}
+.modal-list {
+    overflow-y: auto;
+    flex: 1;
+    scrollbar-width: thin;
+    scrollbar-color: rgba(139,92,246,.35) transparent;
+}
+.modal-list::-webkit-scrollbar { width: 5px; }
+.modal-list::-webkit-scrollbar-track { background: transparent; }
+.modal-list::-webkit-scrollbar-thumb { background: rgba(139,92,246,.35); border-radius: 4px; }
+.modal-list::-webkit-scrollbar-thumb:hover { background: rgba(139,92,246,.6); }
+body.light-mode .modal-list { scrollbar-color: rgba(109,40,217,.3) transparent; }
+body.light-mode .modal-list::-webkit-scrollbar-thumb { background: rgba(109,40,217,.3); }
+body.light-mode .modal-list::-webkit-scrollbar-thumb:hover { background: rgba(109,40,217,.5); }
+.modal-list-item {
+    padding: 10px 20px;
+    border-bottom: 1px solid rgba(139,92,246,.07);
+}
+body.light-mode .modal-list-item { border-bottom-color: rgba(109,40,217,.08); }
+
+.list-item-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 6px;
+}
+.item-name {
+    font-size: 13px;
+    font-weight: 600;
+    color: #ede9fe;
+}
+body.light-mode .item-name { color: #1e1230; }
+
+.btn-remove {
+    padding: 2px 8px;
+    font-size: 11px;
+    background: rgba(239,68,68,.07);
+    color: #f87171;
+    border: 1px solid rgba(239,68,68,.18);
+    border-radius: 6px;
+    cursor: pointer;
+}
+.btn-remove:hover { background: rgba(239,68,68,.18); }
+
+.badge-default {
+    font-size: 10px;
+    color: rgba(167,139,250,.3);
+    padding: 2px 8px;
+    border: 1px solid rgba(139,92,246,.1);
+    border-radius: 6px;
+}
+body.light-mode .badge-default { color: rgba(109,40,217,.45); border-color: rgba(109,40,217,.18); }
+
+.keywords-row {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 5px;
+}
+.keyword-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 3px;
+    background: rgba(139,92,246,.1);
+    color: #c4b5fd;
+    font-size: 11px;
+    border: 1px solid rgba(139,92,246,.22);
+    border-radius: 99px;
+    padding: 2px 4px 2px 9px;
+}
+body.light-mode .keyword-chip { color: #5b21b6; background: rgba(109,40,217,.07); border-color: rgba(109,40,217,.25); }
+
+.keyword-remove-btn {
+    background: none;
+    border: none;
+    cursor: pointer;
+    color: rgba(196,181,253,.4);
+    font-size: 13px;
+    line-height: 1;
+    padding: 0 3px;
+}
+.keyword-remove-btn:hover { color: #f87171; }
+
+.keyword-input {
+    width: 110px;
+    padding: 2px 8px;
+    font-size: 11px;
+    height: 24px;
+}
+.btn-add-keyword {
+    padding: 2px 10px;
+    font-size: 11px;
+    background: rgba(139,92,246,.09);
+    color: #a78bfa;
+    border: 1px solid rgba(139,92,246,.22);
+    border-radius: 6px;
+    cursor: pointer;
+}
+.btn-add-keyword:hover { background: rgba(139,92,246,.2); }
+
+/* ── App header ─────────────────────────────────────────────────────────────── */
+.app-header {
+    max-width: 1280px;
+    margin: 16px auto;
+    width: 100%;
+    padding: 0 24px;
+    position: relative;
+    z-index: 100;
+    background: rgba(7,0,18,.9);
+    backdrop-filter: blur(18px);
+    -webkit-backdrop-filter: blur(18px);
+    border: 1px solid rgba(139,92,246,.3);
+    border-radius: 99px;
+    box-shadow: 0 8px 32px rgba(0,0,0,.45), 0 0 28px rgba(109,40,217,.12), 0 0 0 1px rgba(139,92,246,.06);
+    white-space: nowrap;
+}
+body.light-mode .app-header {
+    background: rgba(250,248,255,.95) !important;
+    border-color: rgba(109,40,217,.2) !important;
+    box-shadow: 0 8px 24px rgba(109,40,217,.1), 0 2px 8px rgba(0,0,0,.06) !important;
+}
+
+.header-inner {
+    height: 56px;
+    display: flex;
+    align-items: center;
+    gap: 20px;
+}
+.header-brand {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+.header-logo {
+    width: 32px;
+    height: 32px;
+    background: rgba(139,92,246,.12);
+    border: 1px solid rgba(139,92,246,.4);
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    box-shadow: 0 0 14px rgba(109,40,217,.2);
+}
+.header-title-text {
+    font-size: 14px;
+    font-weight: 700;
+    line-height: 1.2;
+}
+.header-subtitle {
+    font-size: 11px;
+    color: rgba(148,163,184,.5);
+}
+.header-actions {
+    margin-left: auto;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+.tech-btn.btn-icon-only {
+    width: 28px;
+    height: 28px;
+    padding: 0;
+    flex-shrink: 0;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+}
+.tab-btn-reset {
+    align-self: center;
+    margin-left: 8px;
+}
+.creds-indicator {
+    position: absolute;
+    top: 4px;
+    right: 4px;
+    width: 8px;
+    height: 8px;
+    background: #a78bfa;
+    border-radius: 50%;
+    border: 2px solid #07000f;
+    pointer-events: none;
+    box-shadow: 0 0 6px #a78bfa;
+}
+
+/* ── App main layout ─────────────────────────────────────────────────────────── */
+.app-main {
+    position: relative;
+    z-index: 1;
+    max-width: 1280px;
+    margin: 0 auto;
+    padding: 16px 24px 0;
+}
+.config-card {
+    padding: 20px 24px;
+    margin-bottom: 16px;
+}
+.btn-full {
+    width: 100%;
+    margin-top: 8px;
+}
+.results-card {
+    display: flex;
+    flex-direction: column;
+    z-index: 2;
+}
+
+/* ── Status message ─────────────────────────────────────────────────────────── */
+.status-msg {
+    margin-top: 12px;
+    padding: 10px 14px;
+    border-radius: 8px;
+    background: rgba(139,92,246,.06);
+    border-left: 3px solid rgba(139,92,246,.5);
+    font-size: 13px;
+    color: rgba(196,181,253,.85);
+}
+body.light-mode .status-msg {
+    background: #f1f5f9;
+    border-left-color: #0284c7;
+    color: #475569;
+}
+.status-msg--error {
+    background: rgba(239,68,68,.1) !important;
+    border-left-color: #ef4444 !important;
+    color: #fca5a5 !important;
+}
+body.light-mode .status-msg--error {
+    background: #fef2f2 !important;
+    border-left-color: #ef4444 !important;
+    color: #b91c1c !important;
+}
+.status-msg--success {
+    background: rgba(52,211,153,.08) !important;
+    border-left-color: #34d399 !important;
+    color: #34d399 !important;
+}
+
+/* ── Fetch button states ─────────────────────────────────────────────────────── */
+#fetchBtn {
+    position: relative;
+    overflow: hidden;
+    background: rgba(109,40,217,.2);
+    border-color: rgba(139,92,246,.75);
+    box-shadow: 0 0 14px rgba(109,40,217,.12);
+}
+body.light-mode #fetchBtn {
+    background: rgba(109,40,217,.08);
+    border-color: rgba(109,40,217,.5);
+    box-shadow: 0 0 10px rgba(109,40,217,.08);
+}
+#fetchBtnText {
+    position: relative;
+    z-index: 1;
+}
+.fetch-progress-fill {
+    position: absolute;
+    top: 0;
+    left: 0;
+    height: 100%;
+    width: 0%;
+    border-radius: inherit;
+    transition: width .35s ease;
+    z-index: 0;
+    pointer-events: none;
+}
+
+#fetchBtn:disabled { opacity: 1; }
+
+#fetchBtn.btn-loading {
+    border-color: rgba(139,92,246,.6);
+    color: #c4b5fd;
+    box-shadow: 0 0 22px rgba(109,40,217,.22);
+    cursor: not-allowed;
+    pointer-events: none;
+    text-shadow: none;
+}
+#fetchBtn.btn-loading .fetch-progress-fill {
+    background: rgba(139,92,246,.22);
+}
+
+#fetchBtn.btn-success {
+    border-color: #34d399;
+    color: #34d399;
+    box-shadow: 0 0 22px rgba(52,211,153,.3);
+    text-shadow: 0 0 8px rgba(52,211,153,.5);
+    pointer-events: none;
+}
+#fetchBtn.btn-success .fetch-progress-fill {
+    background: rgba(52,211,153,.18);
+}
+
+#fetchBtn.btn-error {
+    border-color: #ef4444;
+    color: #f87171;
+    box-shadow: 0 0 22px rgba(239,68,68,.25);
+    text-shadow: none;
+    pointer-events: none;
+}
+#fetchBtn.btn-error .fetch-progress-fill {
+    background: rgba(239,68,68,.18);
+}
+
+body.light-mode #fetchBtn.btn-loading {
+    color: rgba(109,40,217,.8);
+    border-color: rgba(109,40,217,.5);
+    box-shadow: 0 0 16px rgba(109,40,217,.14);
+}
+body.light-mode #fetchBtn.btn-loading .fetch-progress-fill {
+    background: rgba(109,40,217,.12);
+}
+
+body.light-mode #fetchBtn.btn-success {
+    border-color: #059669;
+    color: #059669;
+    box-shadow: 0 0 16px rgba(52,211,153,.2);
+    text-shadow: none;
+}
+body.light-mode #fetchBtn.btn-success .fetch-progress-fill {
+    background: rgba(52,211,153,.14);
+}
+
+body.light-mode #fetchBtn.btn-error {
+    border-color: #ef4444;
+    color: #b91c1c;
+    box-shadow: 0 0 16px rgba(239,68,68,.15);
+}
+body.light-mode #fetchBtn.btn-error .fetch-progress-fill {
+    background: rgba(239,68,68,.1);
+}
+
+/* ── CORS notice ────────────────────────────────────────────────────────────── */
+.cors-notice {
+    background: rgba(251,191,36,.06);
+    border: 1px solid rgba(251,191,36,.3);
+    border-radius: 12px;
+    padding: 16px 20px;
+    margin-bottom: 16px;
+}
+.cors-title {
+    font-size: 13px;
+    font-weight: 600;
+    color: #fbbf24;
+    margin-bottom: 6px;
+}
+.cors-text {
+    font-size: 13px;
+    color: rgba(251,191,36,.8);
+    margin-bottom: 6px;
+}
+.cors-list {
+    padding-left: 18px;
+    line-height: 1.8;
+}
+.subject-link {
+    font-size: 12px;
+    font-weight: 600;
+    text-decoration: none;
+    white-space: nowrap;
+}
+#downloadBtn[disabled] {
+    opacity: .35;
+    pointer-events: none;
+}
+
+/* ── Course banner ──────────────────────────────────────────────────────────── */
+.course-banner {
+    padding: 12px 24px;
+    background: rgba(139,92,246,.05);
+    border-bottom: 1px solid rgba(139,92,246,.16);
+    flex-shrink: 0;
+}
+.course-banner-label {
+    font-size: 10px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: .08em;
+    color: rgba(167,139,250,.6);
+    margin-bottom: 3px;
+}
+.course-name-link {
+    font-size: 16px;
+    font-weight: 700;
+    color: #ede9fe;
+    text-decoration: none;
+}
+body.light-mode .course-name-link { color: #1e1230; }
+
+/* ── Tab bar ────────────────────────────────────────────────────────────────── */
+.tab-bar {
+    border-bottom: 1px solid rgba(139,92,246,.16);
+    padding: 0 24px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 8px;
+    flex-shrink: 0;
+    position: sticky;
+    top: 0;
+    z-index: 3;
+    background: #09011a;
+}
+body.light-mode .tab-bar { background: #f8f5ff; }
+.tab-btn {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 14px 20px 14px 16px;
+    font-size: 13px;
+    font-weight: 600;
+    border: none;
+    background: none;
+    cursor: pointer;
+    border-bottom: 2px solid transparent;
+    margin-bottom: -1px;
+    color: rgba(148,163,184,.45);
+}
+.tab-btn--active {
+    color: #a78bfa;
+    border-bottom-color: #a78bfa;
+    text-shadow: 0 0 8px rgba(139,92,246,.5);
+}
+.tab-count {
+    font-size: 11px;
+    font-weight: 700;
+    padding: 1px 8px;
+    border-radius: 99px;
+    border: 1px solid rgba(148,163,184,.14);
+    background: rgba(148,163,184,.08);
+    color: rgba(148,163,184,.45);
+}
+.tab-count--active {
+    background: rgba(139,92,246,.14);
+    color: #a78bfa;
+    border-color: rgba(139,92,246,.3);
+}
+.toolbar {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 0;
+}
+.toolbar-download-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 14px;
+    font-size: 12px;
+}
+.row-count-badge {
+    font-size: 12px;
+    font-weight: 600;
+    color: rgba(148,163,184,.45);
+    background: rgba(148,163,184,.04);
+    border: 1px solid rgba(148,163,184,.12);
+    padding: 5px 12px;
+    border-radius: 8px;
+}
+
+.table-scroll-wrap {
+    overflow-x: clip;
+    scrollbar-width: thin;
+    scrollbar-color: rgba(139,92,246,.25) transparent;
+}
+.table-scroll-wrap::-webkit-scrollbar { height: 5px; }
+.table-scroll-wrap::-webkit-scrollbar-track { background: transparent; }
+.table-scroll-wrap::-webkit-scrollbar-thumb { background: rgba(139,92,246,.25); border-radius: 4px; }
+.table-scroll-wrap::-webkit-scrollbar-thumb:hover { background: rgba(139,92,246,.45); }
+body.light-mode .table-scroll-wrap { scrollbar-color: rgba(109,40,217,.3) transparent; }
+body.light-mode .table-scroll-wrap::-webkit-scrollbar-thumb { background: rgba(109,40,217,.3); }
+body.light-mode .table-scroll-wrap::-webkit-scrollbar-thumb:hover { background: rgba(109,40,217,.5); }
+
+/* ── Scroll fade indicator ───────────────────────────────────────────────────── */
+.scroll-fade-bottom {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    height: 72px;
+    background: linear-gradient(to bottom, transparent, rgba(15,10,25,0.96));
+    transition: opacity 0.25s ease;
+    z-index: 10;
+    pointer-events: none;
+}
+.scroll-fade-bottom--hidden { opacity: 0; }
+body.light-mode .scroll-fade-bottom { background: linear-gradient(to bottom, transparent, rgba(249,245,255,0.97)); }
+
+/* ── Table ──────────────────────────────────────────────────────────────────── */
+.report-table {
+    width: 100%;
+    border-collapse: separate;
+    border-spacing: 0;
+}
+.table-head-row {
+    background: #09011a;
+}
+body.light-mode .table-head-row { background: #f8f5ff; }
+body.light-mode .th-cell,
+body.light-mode .th-cell-nowrap,
+body.light-mode .th-cell-center { color: rgba(109,40,217,.75); background: #f8f5ff; }
+.th-cell {
+    padding: 10px 16px;
+    text-align: left;
+    font-size: 11px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: .07em;
+    color: rgba(167,139,250,.55);
+    background: #09011a;
+    position: sticky;
+    top: var(--tab-bar-h, 48px);
+    z-index: 2;
+    border-bottom: 1px solid rgba(139,92,246,.14);
+}
+.th-cell-nowrap {
+    padding: 10px 16px;
+    text-align: left;
+    font-size: 11px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: .07em;
+    color: rgba(167,139,250,.55);
+    white-space: nowrap;
+    background: #09011a;
+    position: sticky;
+    top: var(--tab-bar-h, 48px);
+    z-index: 2;
+    border-bottom: 1px solid rgba(139,92,246,.14);
+}
+.th-cell-center {
+    padding: 10px 16px;
+    text-align: center;
+    font-size: 11px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: .07em;
+    color: rgba(167,139,250,.55);
+    white-space: nowrap;
+    background: #09011a;
+    position: sticky;
+    top: var(--tab-bar-h, 48px);
+    z-index: 2;
+    border-bottom: 1px solid rgba(139,92,246,.14);
+}
+.th-icon-muted {
+    opacity: 0.55;
+    display: block;
+    margin: 0 auto;
+}
+
+/* ── App footer ─────────────────────────────────────────────────────────────── */
+.app-footer {
+    text-align: center;
+    font-size: 11px;
+    color: rgba(148,163,184,.35);
+    padding: 8px 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 12px;
+    flex-wrap: wrap;
+    flex-shrink: 0;
+}
+.legend-item {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+}
+.legend-dot {
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    display: inline-block;
+}
+.legend-dot-verified  { background: #34d399; box-shadow: 0 0 5px #34d399; }
+.legend-dot-inferred  { background: #fb923c; box-shadow: 0 0 5px #fb923c; }
+.legend-dot-estimated { background: #fbbf24; box-shadow: 0 0 5px #fbbf24; }
+
+/* ── Table generated content ─────────────────────────────────────────────────── */
+.empty-state-cell {
+    text-align: center;
+    padding: 64px 20px;
+    color: #94a3b8;
+    font-size: 13px;
+    font-style: italic;
+}
+.course-empty-cell {
+    text-align: left;
+    padding: 5px 16px 5px 50px;
+    color: rgba(148,163,184,.4);
+    font-size: 12px;
+    font-style: italic;
+    background: rgba(139,92,246,.03);
+    border-bottom: 1px solid rgba(139,92,246,.08);
+}
+body.light-mode .course-empty-cell { color: rgba(30,18,48,.4); background: rgba(109,40,217,.02); }
+.course-sep-cell {
+    padding: 5px 16px;
+    background: #120828;
+    border-top: 1px solid rgba(139,92,246,.2);
+    border-bottom: 1px solid rgba(139,92,246,.12);
+}
+.sticky-course-banner {
+    position: fixed;
+    top: var(--tab-bar-h, 48px);
+    z-index: 15;
+    padding: 5px 24px;
+    background: #120828;
+    border-bottom: 1px solid rgba(139,92,246,.2);
+}
+body.light-mode .sticky-course-banner { background: #f0ebff; }
+body.light-mode .course-sep-cell { background: #f0ebff; }
+.course-sep-inner {
+    display: flex;
+    align-items: center;
+    overflow: hidden;
+}
+.course-sep-link {
+    font-size: 12px;
+    font-weight: 700;
+    color: #a78bfa;
+    text-decoration: none;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    min-width: 0;
+    flex: 1;
+}
+.course-sep-link:hover { text-decoration: underline; }
+.course-sep-heatmap-btn {
+    margin-right: 6px;
+}
+.dup-modal-body {
+    font-size: 13px;
+    color: rgba(196,181,253,.7);
+    margin-bottom: 12px;
+    line-height: 1.5;
+}
+body.light-mode .dup-modal-body { color: rgba(30,18,48,.6); }
+.dup-modal-list {
+    list-style: disc;
+    padding-left: 20px;
+    margin-bottom: 16px;
+    font-size: 12px;
+    color: rgba(196,181,253,.9);
+    word-break: break-all;
+    line-height: 1.6;
+}
+body.light-mode .dup-modal-list { color: rgba(30,18,48,.8); }
+.dup-modal-footer {
+    padding: 16px 20px;
+    border-top: 1px solid rgba(139,92,246,.18);
+    display: flex;
+    justify-content: flex-end;
+}
+
+.input-reveal-wrap {
+    position: relative;
+}
+.reveal-toggle-btn {
+    position: absolute;
+    right: 8px;
+    top: 50%;
+    transform: translateY(-50%);
+    background: none;
+    border: none;
+    padding: 0;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    opacity: 0.5;
+}
+.reveal-toggle-btn:hover { opacity: 1; }
+
+.td-date {
+    padding: 10px 16px;
+    white-space: nowrap;
+}
+.td-num {
+    padding: 10px 16px;
+    font-size: 11px;
+    font-family: monospace;
+}
+.td-cell {
+    padding: 10px 16px;
+}
+.th-strategy {
+    width: 200px;
+    max-width: 200px;
+}
+.td-strategy {
+    padding: 6px 16px;
+    width: 200px;
+    max-width: 200px;
+}
+.td-log {
+    text-align: center;
+}
+.date-badge {
+    margin-left: 6px;
+    font-size: 10px;
+    font-weight: 700;
+    padding: 1px 6px;
+    border-radius: 99px;
+    cursor: default;
+}
+.date-badge-verified  { background: rgba(52,211,153,.15);  color: #34d399; border: 1px solid rgba(52,211,153,.3); }
+.date-badge-inferred  { background: rgba(251,146,60,.15);  color: #fb923c; border: 1px solid rgba(251,146,60,.3); }
+.date-badge-estimated { background: rgba(251,191,36,.15);  color: #fbbf24; border: 1px solid rgba(251,191,36,.3); }
+body.light-mode .date-badge-verified  { background: #d1fae5; color: #059669; border-color: #a7f3d0; }
+body.light-mode .date-badge-inferred  { background: #ffedd5; color: #ea580c; border-color: #fed7aa; }
+body.light-mode .date-badge-estimated { background: #fef3c7; color: #ca8a04; border-color: #fde68a; }
+
+.table-link {
+    font-weight: 600;
+    text-decoration: none;
+}
+.table-link:hover { text-decoration: underline; }
+
+.table-text-muted {
+    font-weight: 500;
+}
+.activity-type-chip {
+    font-size: 11px;
+    font-weight: 600;
+    padding: 2px 10px;
+    border-radius: 99px;
+    background: rgba(139,92,246,.12);
+    color: #a78bfa;
+    border: 1px solid rgba(139,92,246,.3);
+}
+body.light-mode .activity-type-chip {
+    background: #f0f9ff;
+    color: #0369a1;
+    border-color: #bae6fd;
+}
+.date-chip {
+    font-family: monospace;
+    font-size: 12px;
+    padding: 3px 10px;
+    border-radius: 6px;
+    font-weight: 600;
+    background: rgba(139,92,246,.08);
+    color: #a78bfa;
+}
+body.light-mode .date-chip {
+    background: #f1f5f9;
+    color: #334155;
+}
+
+/* ── Settings dropdown ──────────────────────────────────────────────────────── */
+.settings-dropdown-wrap {
+    position: relative;
+}
+.settings-dropdown {
+    position: absolute;
+    top: calc(100% + 6px);
+    right: 0;
+    z-index: 9999;
+    background: rgba(7,0,18,.97);
+    border: 1px solid rgba(139,92,246,.3);
+    border-radius: 10px;
+    padding: 4px;
+    min-width: 190px;
+    box-shadow: 0 8px 32px rgba(0,0,0,.55);
+    backdrop-filter: blur(12px);
+}
+body.light-mode .settings-dropdown {
+    background: rgba(250,248,255,.97);
+    border-color: rgba(109,40,217,.22);
+    box-shadow: 0 8px 24px rgba(109,40,217,.12);
+}
+.settings-dropdown-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    width: 100%;
+    padding: 9px 14px;
+    background: none;
+    border: none;
+    border-radius: 7px;
+    cursor: pointer;
+    font-size: 13px;
+    font-weight: 500;
+    color: #ede9fe;
+    text-align: left;
+    transition: background .12s;
+}
+.settings-dropdown-item:hover {
+    background: rgba(139,92,246,.12);
+}
+body.light-mode .settings-dropdown-item {
+    color: #1e1230;
+}
+body.light-mode .settings-dropdown-item:hover {
+    background: rgba(109,40,217,.08);
+}
+
+/* ── Filter dropdown ─────────────────────────────────────────────────────────── */
+.filter-dropdown {
+    position: fixed;
+    z-index: 9999;
+    background: rgba(7,0,18,.97);
+    border: 1px solid rgba(139,92,246,.3);
+    border-radius: 10px;
+    padding: 6px 0;
+    min-width: 220px;
+    box-shadow: 0 8px 32px rgba(0,0,0,.55);
+    backdrop-filter: blur(12px);
+}
+.filter-dropdown-date {
+    position: fixed;
+    z-index: 9999;
+    background: rgba(7,0,18,.97);
+    border: 1px solid rgba(139,92,246,.3);
+    border-radius: 10px;
+    padding: 6px 0;
+    min-width: 190px;
+    box-shadow: 0 8px 32px rgba(0,0,0,.55);
+    backdrop-filter: blur(12px);
+}
+.filter-dropdown-header {
+    padding: 5px 12px 7px;
+    font-size: 10px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: .08em;
+    color: rgba(167,139,250,.45);
+    border-bottom: 1px solid rgba(139,92,246,.12);
+    margin-bottom: 2px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+.filter-reset-btn {
+    background: none;
+    border: none;
+    cursor: pointer;
+    font-size: 11px;
+    color: rgba(167,139,250,.55);
+    padding: 0;
+    font-family: inherit;
+}
+.filter-reset-btn:hover { color: #a78bfa; }
+
+.filter-dropdown-list {
+    overflow-y: auto;
+    max-height: 260px;
+    padding: 2px 4px;
+}
+.filter-dropdown-list-tall {
+    overflow-y: auto;
+    max-height: 280px;
+    padding: 2px 4px;
+}
+.filter-section-header {
+    padding: 6px 8px 2px;
+    font-size: 10px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: .06em;
+    color: rgba(167,139,250,.3);
+}
+.filter-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 5px 8px;
+    cursor: pointer;
+    border-radius: 6px;
+    font-size: 12px;
+    color: #ede9fe;
+    transition: background .1s;
+}
+.filter-item:hover { background: rgba(139,92,246,.1); }
+
+.filter-checkbox {
+    accent-color: #a78bfa;
+    width: 13px;
+    height: 13px;
+    cursor: pointer;
+    flex-shrink: 0;
+}
+
+/* ── Heatmap modal ──────────────────────────────────────────────────────────── */
+#heatmapModal {
+    background: rgba(4,0,10,.88);
+    backdrop-filter: blur(6px);
+    -webkit-backdrop-filter: blur(6px);
+}
+.hm-modal-card {
+    width: 100%;
+    max-width: 880px;
+    margin: 16px;
+    display: flex;
+    flex-direction: column;
+    max-height: calc(100vh - 48px);
+    overflow: hidden;
+    background: rgba(7,0,18,.97) !important;
+    backdrop-filter: none !important;
+    -webkit-backdrop-filter: none !important;
+}
+body.light-mode .hm-modal-card {
+    background: rgba(255,255,255,.99) !important;
+}
+.hm-selector-bar {
+    padding: 10px 20px;
+    border-bottom: 1px solid rgba(139,92,246,.12);
+    flex-shrink: 0;
+}
+.hm-select { width: 100%; }
+.hm-content {
+    overflow-y: auto;
+    flex: 1;
+    padding: 20px 20px 8px;
+    scrollbar-width: thin;
+    scrollbar-color: rgba(139,92,246,.35) rgba(139,92,246,.06);
+}
+.hm-content::-webkit-scrollbar { width: 6px; }
+.hm-content::-webkit-scrollbar-track { background: rgba(139,92,246,.06); border-radius: 3px; }
+.hm-content::-webkit-scrollbar-thumb { background: rgba(139,92,246,.35); border-radius: 3px; }
+.hm-content::-webkit-scrollbar-thumb:hover { background: rgba(139,92,246,.55); }
+body.light-mode .hm-content { scrollbar-color: rgba(109,40,217,.3) rgba(109,40,217,.05); }
+body.light-mode .hm-content::-webkit-scrollbar-track { background: rgba(109,40,217,.05); }
+body.light-mode .hm-content::-webkit-scrollbar-thumb { background: rgba(109,40,217,.3); }
+body.light-mode .hm-content::-webkit-scrollbar-thumb:hover { background: rgba(109,40,217,.5); }
+.hm-nav {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 10px 20px;
+    border-top: 1px solid rgba(139,92,246,.12);
+    flex-shrink: 0;
+    gap: 8px;
+    min-height: 52px;
+}
+.hm-nav-btn {
+    max-width: 44%;
+    min-width: 0;
+    overflow: hidden;
+    font-size: 12px;
+    padding: 6px 14px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+.hm-nav-label {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    min-width: 0;
+}
+
+/* ── Heatmap calendar layout ─────────────────────────────────────────────────── */
+.hm-year-section { margin-bottom: 28px; }
+.hm-year-section:last-child { margin-bottom: 0; }
+.hm-year-label {
+    font-size: 11px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: .08em;
+    color: rgba(167,139,250,.55);
+    margin-bottom: 10px;
+}
+body.light-mode .hm-year-label { color: rgba(109,40,217,.55); }
+
+/* 6-column × 2-row month grid */
+.hm-cal-grid {
+    display: grid;
+    grid-template-columns: repeat(6, 1fr);
+    gap: 10px 8px;
+}
+.hm-month-card { min-width: 0; }
+.hm-cal-month-name {
+    font-size: 10px;
+    font-weight: 700;
+    color: rgba(167,139,250,.7);
+    text-align: center;
+    margin-bottom: 3px;
+}
+body.light-mode .hm-cal-month-name { color: rgba(109,40,217,.7); }
+
+.hm-cal-dow-row {
+    display: grid;
+    grid-template-columns: repeat(7, 1fr);
+    margin-bottom: 2px;
+}
+.hm-cal-dow-label {
+    font-size: 7px;
+    text-align: center;
+    color: rgba(148,163,184,.4);
+    line-height: 1.2;
+}
+body.light-mode .hm-cal-dow-label { color: rgba(100,116,139,.5); }
+
+.hm-cal-days-grid {
+    display: grid;
+    grid-template-columns: repeat(7, 1fr);
+    gap: 1px;
+}
+.hm-cal-day {
+    aspect-ratio: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 2px;
+    cursor: default;
+}
+.hm-cal-day-num {
+    font-size: 7px;
+    color: rgba(226,232,240,.5);
+    line-height: 1;
+    pointer-events: none;
+    user-select: none;
+}
+body.light-mode .hm-cal-day-num { color: rgba(30,18,48,.45); }
+
+.hm-cal-day--empty { visibility: hidden; }
+.hm-cal-day--future { background: rgba(148,163,184,.04); }
+.hm-cal-day--future .hm-cal-day-num { color: rgba(148,163,184,.2); }
+body.light-mode .hm-cal-day--future { background: rgba(100,116,139,.05); }
+body.light-mode .hm-cal-day--future .hm-cal-day-num { color: rgba(100,116,139,.25); }
+
+/* Intensity levels — shared with legend cells */
+.hm-level-0 { background: rgba(52,211,153,.07); }
+.hm-level-1 { background: rgba(52,211,153,.30); }
+.hm-level-2 { background: rgba(52,211,153,.54); }
+.hm-level-3 { background: rgba(52,211,153,.76); }
+.hm-level-4 { background: rgba(52,211,153,.96); }
+body.light-mode .hm-level-0 { background: rgba(16,185,129,.09); }
+body.light-mode .hm-level-1 { background: rgba(16,185,129,.32); }
+body.light-mode .hm-level-2 { background: rgba(16,185,129,.54); }
+body.light-mode .hm-level-3 { background: rgba(16,185,129,.76); }
+body.light-mode .hm-level-4 { background: rgba(16,185,129,.96); }
+
+/* Stronger day-number contrast on filled cells */
+.hm-level-1 .hm-cal-day-num,
+.hm-level-2 .hm-cal-day-num { color: rgba(255,255,255,.75); }
+.hm-level-3 .hm-cal-day-num,
+.hm-level-4 .hm-cal-day-num { color: rgba(255,255,255,.95); }
+body.light-mode .hm-level-1 .hm-cal-day-num,
+body.light-mode .hm-level-2 .hm-cal-day-num,
+body.light-mode .hm-level-3 .hm-cal-day-num,
+body.light-mode .hm-level-4 .hm-cal-day-num { color: rgba(255,255,255,.95); }
+
+/* Pointer + ring on hover for cells with data */
+.hm-cal-day.hm-level-1,
+.hm-cal-day.hm-level-2,
+.hm-cal-day.hm-level-3,
+.hm-cal-day.hm-level-4 { cursor: pointer; }
+.hm-cal-day.hm-level-1:hover,
+.hm-cal-day.hm-level-2:hover,
+.hm-cal-day.hm-level-3:hover,
+.hm-cal-day.hm-level-4:hover { outline: 1px solid rgba(167,139,250,.55); outline-offset: 0; }
+body.light-mode .hm-cal-day.hm-level-1:hover,
+body.light-mode .hm-cal-day.hm-level-2:hover,
+body.light-mode .hm-cal-day.hm-level-3:hover,
+body.light-mode .hm-cal-day.hm-level-4:hover { outline-color: rgba(109,40,217,.5); }
+
+/* Legend */
+.hm-legend {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    justify-content: flex-end;
+    margin-top: 10px;
+}
+.hm-legend-label {
+    font-size: 9px;
+    color: rgba(148,163,184,.5);
+}
+body.light-mode .hm-legend-label { color: rgba(100,116,139,.6); }
+.hm-legend-cell {
+    width: 11px;
+    height: 11px;
+    flex-shrink: 0;
+    border-radius: 2px;
+}
+
+.hm-empty-state {
+    text-align: center;
+    padding: 40px 20px;
+    color: rgba(148,163,184,.5);
+    font-size: 13px;
+    font-style: italic;
+}
+body.light-mode .hm-empty-state { color: rgba(30,18,48,.45); }
+
+/* Floating tooltip — z-index must be above .modal-backdrop (9999) */
+.hm-tooltip {
+    position: fixed;
+    z-index: 10000;
+    background: rgba(10,5,25,.97);
+    border: 1px solid rgba(167,139,250,.25);
+    border-radius: 8px;
+    padding: 10px 13px;
+    min-width: 160px;
+    max-width: 260px;
+    max-height: 260px;
+    overflow-y: auto;
+    box-shadow: 0 8px 32px rgba(0,0,0,.55);
+    scrollbar-width: thin;
+    scrollbar-color: rgba(139,92,246,.2) transparent;
+}
+body.light-mode .hm-tooltip {
+    background: rgba(250,248,255,.98);
+    border-color: rgba(109,40,217,.2);
+    box-shadow: 0 8px 32px rgba(0,0,0,.12);
+}
+.hm-tooltip-header {
+    font-size: 11px;
+    font-weight: 600;
+    color: rgba(167,139,250,.9);
+    margin-bottom: 7px;
+    white-space: nowrap;
+}
+body.light-mode .hm-tooltip-header { color: #5b21b6; }
+.hm-tooltip-list {
+    list-style: none;
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+}
+/* Each bullet row is a single truncated line */
+.hm-tooltip-list li:not(.hm-tooltip-more) {
+    display: block;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+.hm-tooltip-list li:not(.hm-tooltip-more)::before {
+    content: "• ";
+    color: rgba(167,139,250,.5);
+}
+body.light-mode .hm-tooltip-list li:not(.hm-tooltip-more)::before { color: rgba(109,40,217,.45); }
+/* Link is inline so bullet and name stay on the same line */
+.hm-tooltip-link {
+    font-size: 10px;
+    color: rgba(196,181,253,.85);
+    text-decoration: none;
+}
+.hm-tooltip-link:hover { color: #a78bfa; text-decoration: underline; }
+body.light-mode .hm-tooltip-link { color: #6d28d9; }
+body.light-mode .hm-tooltip-link:hover { color: #5b21b6; }
+.hm-tooltip-item {
+    font-size: 10px;
+    color: rgba(226,232,240,.6);
+}
+body.light-mode .hm-tooltip-item { color: rgba(30,18,48,.6); }
+.hm-tooltip-more {
+    font-size: 10px;
+    color: rgba(148,163,184,.5);
+    margin-top: 2px;
+}
+body.light-mode .hm-tooltip-more { color: rgba(100,116,139,.55); }
+
+*,
+*::before,
+*::after {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+}
+
+input,
+button {
+    font-family: inherit;
+}
+
+/* ── Grid Tech background ──────────────────────────────────────────── */
+body {
+    padding-top: 16px;
+    font-family: system-ui, -apple-system, sans-serif;
+    background-color: #07000f;
+    background-image:
+        linear-gradient(rgba(167, 139, 250, .12) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(167, 139, 250, .12) 1px, transparent 1px);
+    background-size: 44px 44px;
+    animation: gridScroll 4s linear infinite;
+    will-change: background-position;
+    color: #e2e8f0;
+    min-height: 100vh;
+    position: relative;
+    overflow-x: hidden;
+    overflow-y: scroll;
+}
+
+@keyframes gridScroll {
+    from { background-position: 0 0; }
+    to   { background-position: 44px 44px; }
+}
+
+/* Glow orb — centered top */
+body::before {
+    content: '';
+    position: fixed;
+    top: -420px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 920px;
+    height: 920px;
+    background: radial-gradient(circle, rgba(109, 40, 217, .14) 0%, transparent 60%);
+    animation: orbpulse 5s ease-in-out infinite;
+    pointer-events: none;
+    z-index: 0;
+}
+
+@keyframes orbpulse {
+
+    0%,
+    100% {
+        opacity: .55;
+        transform: translateX(-50%) scale(1);
+    }
+
+    50% {
+        opacity: 1;
+        transform: translateX(-50%) scale(1.07);
+    }
+}
+
+/* ── Modal backdrop — display:flex must live here so x-show doesn't destroy it ── */
+.modal-backdrop {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    z-index: 9999;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+/* ── Modal card entrance ───────────────────────────────────────────── */
+@keyframes modalIn {
+    from {
+        opacity: 0;
+        transform: scale(.96) translateY(10px);
+    }
+
+    to {
+        opacity: 1;
+        transform: scale(1) translateY(0);
+    }
+}
+
+#settingsModal,
+#strategyModal,
+#subjectModal {
+    animation: modalIn .2s ease-out;
+}
+
+/* ── Textarea resize disable ──────────────────────────────────────────── */
+textarea.tech-input {
+    resize: none;
+    line-height: 1.6;
+}
+
+/* ── courseUrl textarea scrollbar ────────────────────────────────────── */
+#courseUrl {
+    scrollbar-width: thin;
+    scrollbar-color: rgba(139,92,246,.35) rgba(139,92,246,.06);
+}
+#courseUrl::-webkit-scrollbar { width: 6px; }
+#courseUrl::-webkit-scrollbar-track { background: rgba(139,92,246,.06); border-radius: 3px; }
+#courseUrl::-webkit-scrollbar-thumb { background: rgba(139,92,246,.35); border-radius: 3px; }
+#courseUrl::-webkit-scrollbar-thumb:hover { background: rgba(139,92,246,.55); }
+body.light-mode #courseUrl {
+    scrollbar-color: rgba(109,40,217,.3) rgba(109,40,217,.05);
+}
+body.light-mode #courseUrl::-webkit-scrollbar-track { background: rgba(109,40,217,.05); }
+body.light-mode #courseUrl::-webkit-scrollbar-thumb { background: rgba(109,40,217,.3); }
+body.light-mode #courseUrl::-webkit-scrollbar-thumb:hover { background: rgba(109,40,217,.5); }
+
+/* ── Component utilities ───────────────────────────────────────────── */
+.tech-card {
+    background: rgba(7, 0, 18, .8);
+    backdrop-filter: blur(14px);
+    -webkit-backdrop-filter: blur(14px);
+    border: 1px solid rgba(139, 92, 246, .22);
+    border-radius: 12px;
+    transition: border-color .2s, box-shadow .2s;
+}
+
+.tech-card:hover {
+    border-color: rgba(139, 92, 246, .42);
+    box-shadow: 0 0 28px rgba(109, 40, 217, .12);
+}
+
+.tech-input {
+    width: 100%;
+    background: rgba(7, 0, 18, .7);
+    border: 1px solid rgba(139, 92, 246, .3);
+    border-radius: 8px;
+    color: #ede9fe;
+    font-size: 13px;
+    padding: 8px 12px;
+    transition: border-color .15s, box-shadow .15s;
+}
+
+.tech-input:focus {
+    outline: none;
+    border-color: #a78bfa;
+    box-shadow: 0 0 0 3px rgba(139, 92, 246, .18);
+}
+
+.tech-input::placeholder {
+    color: rgba(148, 163, 184, .4);
+}
+
+.tech-btn {
+    background: transparent;
+    border: 1px solid rgba(139, 92, 246, .55);
+    color: #a78bfa;
+    border-radius: 8px;
+    font-size: 13px;
+    font-weight: 600;
+    padding: 8px 20px;
+    cursor: pointer;
+    white-space: nowrap;
+    text-shadow: 0 0 8px rgba(139, 92, 246, .5);
+    transition: background .15s, box-shadow .15s, border-color .15s;
+}
+
+.tech-btn:hover {
+    background: rgba(139, 92, 246, .14);
+    border-color: #a78bfa;
+    box-shadow: 0 0 18px rgba(109, 40, 217, .3);
+}
+
+.tech-title {
+    color: #a78bfa;
+    text-shadow: 0 0 10px rgba(139, 92, 246, .6), 0 0 24px rgba(109, 40, 217, .25);
+}
+
+/* ── Header icon buttons ───────────────────────────────────────────── */
+.header-icon-btn {
+    width: 36px;
+    height: 36px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: rgba(139, 92, 246, .1);
+    border: 1px solid rgba(139, 92, 246, .3);
+    border-radius: 8px;
+    cursor: pointer;
+    color: #a78bfa;
+    transition: background .15s, box-shadow .15s;
+}
+
+.header-icon-btn:hover {
+    background: rgba(139, 92, 246, .2);
+    box-shadow: 0 0 14px rgba(109, 40, 217, .28);
+}
+
+/* ── Table overrides — !important beats app.js inline styles ──────── */
+#reportTbody tr {
+    border-bottom: 1px solid rgba(139, 92, 246, .07) !important;
+}
+
+#reportTbody tr:last-child {
+    border-bottom: none !important;
+}
+
+#reportTbody tr:hover {
+    background: rgba(139, 92, 246, .05) !important;
+}
+
+/* Course name link — CSS hover instead of inline onmouseover */
+#courseNameDisplay {
+    transition: color .15s;
+}
+
+#courseNameDisplay:hover {
+    color: #a78bfa !important;
+    text-decoration: underline !important;
+}
+
+summary {
+    list-style: none;
+}
+
+summary::-webkit-details-marker {
+    display: none;
+}
+
+@keyframes spin {
+    to {
+        transform: rotate(360deg);
+    }
+}
+
+/* Alpine cloak */
+[x-cloak] {
+    display: none !important;
+}
+
+/* ── Strategy select ───────────────────────────────────────────────── */
+.strategy-sel {
+    background: rgba(7, 0, 18, .7);
+    color: #ede9fe;
+    border: 1px solid rgba(139, 92, 246, .3);
+    border-radius: 6px;
+    padding: 2px 6px;
+    font-size: 11px;
+    cursor: pointer;
+    width: 100%;
+    max-width: 100%;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.strategy-sel:focus {
+    outline: none;
+    border-color: #a78bfa;
+    box-shadow: 0 0 0 2px rgba(139, 92, 246, .18);
+}
+
+/* ── View Logs link ─────────────────────────────────────────────────── */
+.log-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    padding: 4px 12px;
+    background: rgba(139, 92, 246, .1);
+    color: #a78bfa;
+    font-size: 11px;
+    font-weight: 700;
+    border: 1px solid rgba(139, 92, 246, .28);
+    border-radius: 99px;
+    text-decoration: none;
+    white-space: nowrap;
+    transition: background .15s, box-shadow .15s;
+}
+
+.log-btn:hover {
+    background: rgba(139, 92, 246, .22);
+    box-shadow: 0 0 10px rgba(109, 40, 217, .2);
+}
+
+/* ── Light mode ────────────────────────────────────────────────────── */
+body.light-mode {
+    background-color: #f5f3ff;
+    background-image:
+        linear-gradient(rgba(109, 40, 217, .15) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(109, 40, 217, .15) 1px, transparent 1px);
+    color: #1e1230;
+}
+
+body.light-mode::before {
+    background: radial-gradient(circle, rgba(109, 40, 217, .06) 0%, transparent 60%);
+}
+
+body.light-mode .tech-card {
+    background: rgba(255, 255, 255, .88);
+    border-color: rgba(109, 40, 217, .18);
+    box-shadow: 0 1px 4px rgba(109, 40, 217, .06);
+}
+
+body.light-mode .tech-card:hover {
+    border-color: rgba(109, 40, 217, .38);
+    box-shadow: 0 4px 20px rgba(109, 40, 217, .09);
+}
+
+body.light-mode .tech-input {
+    background: #fff;
+    border-color: rgba(109, 40, 217, .22);
+    color: #1e1230;
+}
+
+body.light-mode .tech-input::placeholder {
+    color: rgba(100, 116, 139, .5);
+}
+
+body.light-mode .tech-input:focus {
+    border-color: #7c3aed;
+    box-shadow: 0 0 0 3px rgba(109, 40, 217, .12);
+}
+
+body.light-mode .tech-btn {
+    color: #7c3aed;
+    text-shadow: none;
+    border-color: rgba(109, 40, 217, .45);
+}
+
+body.light-mode .tech-btn:hover {
+    background: rgba(109, 40, 217, .07);
+    border-color: #7c3aed;
+    box-shadow: 0 0 14px rgba(109, 40, 217, .12);
+}
+
+body.light-mode .tech-title {
+    color: #6d28d9;
+    text-shadow: 0 0 8px rgba(109, 40, 217, .15);
+}
+
+body.light-mode .header-icon-btn {
+    background: rgba(109, 40, 217, .08);
+    border-color: rgba(109, 40, 217, .22);
+    color: #7c3aed;
+}
+
+body.light-mode .header-icon-btn:hover {
+    background: rgba(109, 40, 217, .16);
+    box-shadow: 0 0 12px rgba(109, 40, 217, .15);
+}
+
+body.light-mode #reportTbody tr {
+    border-bottom: 1px solid rgba(109, 40, 217, .06) !important;
+}
+
+body.light-mode #reportTbody tr:hover {
+    background: rgba(109, 40, 217, .04) !important;
+}
+
+body.light-mode #courseNameDisplay:hover {
+    color: #6d28d9 !important;
+}
+
+body.light-mode .strategy-sel {
+    background: #fff;
+    color: #1e1230;
+    border-color: rgba(109, 40, 217, .22);
+}
+
+body.light-mode .strategy-sel:focus {
+    border-color: #7c3aed;
+}
+
+body.light-mode .log-btn {
+    background: rgba(109, 40, 217, .07);
+    color: #6d28d9;
+    border-color: rgba(109, 40, 217, .22);
+}
+
+body.light-mode .log-btn:hover {
+    background: rgba(109, 40, 217, .14);
+}
+
+/* ── Light mode — text visibility fixes ─────────────────────────────────── */
+body.light-mode .th-cell,
+body.light-mode .th-cell-nowrap,
+body.light-mode .th-cell-center { color: rgba(109,40,217,.65); }
+
+body.light-mode .tab-btn { color: rgba(30,18,48,.5); }
+body.light-mode .tab-btn--active { color: #5b21b6; border-bottom-color: #5b21b6; text-shadow: none; }
+body.light-mode .tab-count { color: rgba(30,18,48,.45); background: rgba(30,18,48,.04); border-color: rgba(30,18,48,.12); }
+body.light-mode .tab-count--active { background: rgba(91,33,182,.12); color: #5b21b6; border-color: rgba(91,33,182,.3); }
+body.light-mode .row-count-badge { color: rgba(30,18,48,.55); background: rgba(30,18,48,.04); border-color: rgba(30,18,48,.12); }
+
+body.light-mode .course-banner-label { color: rgba(109,40,217,.65); }
+body.light-mode .course-sep-link { color: #6d28d9; }
+
+body.light-mode .status-msg--success {
+    color: #059669 !important;
+    background: rgba(16,185,129,.08) !important;
+    border-left-color: #059669 !important;
+}
+
+body.light-mode .filter-dropdown,
+body.light-mode .filter-dropdown-date {
+    background: rgba(250,248,255,.98);
+    border-color: rgba(109,40,217,.22);
+    box-shadow: 0 8px 24px rgba(109,40,217,.12);
+}
+body.light-mode .filter-dropdown-header { color: rgba(109,40,217,.55); border-bottom-color: rgba(109,40,217,.1); }
+body.light-mode .filter-reset-btn { color: rgba(109,40,217,.6); }
+body.light-mode .filter-reset-btn:hover { color: #6d28d9; }
+body.light-mode .filter-section-header { color: rgba(109,40,217,.45); }
+body.light-mode .filter-item { color: #1e1230; }
+body.light-mode .filter-item:hover { background: rgba(109,40,217,.07); }
+body.light-mode .app-footer { color: rgba(30,18,48,.45); }
+body.light-mode .header-subtitle { color: rgba(30,18,48,.5); }
+body.light-mode .empty-state-cell { color: rgba(30,18,48,.5); }
+
+/* ── Sortable header ──────────────────────────────────────────────────── */
+thead th[data-sort] {
+    cursor: pointer;
+    user-select: none;
+}
+
+thead th[data-sort]:hover {
+    color: #a78bfa !important;
+}
+body.light-mode thead th[data-sort]:hover { color: #5b21b6 !important; }
+
+.sort-ind {
+    margin-left: 4px;
+    font-size: 10px;
+    opacity: .55;
+}
+
+/* ── Activity type filter icon ────────────────────────────────────────── */
+.type-filter-icon {
+    margin-left: 5px;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    vertical-align: middle;
+    color: rgba(167, 139, 250, .3);
+    transition: color .15s;
+}
+
+.type-filter-icon:hover {
+    color: #a78bfa !important;
+}
+
+.type-filter-icon.filter-active {
+    color: #c4b5fd;
+}
+body.light-mode .type-filter-icon:hover { color: #5b21b6 !important; }
+body.light-mode .type-filter-icon.filter-active { color: #6d28d9; }
+
+/* ── Icon images — dark/light filter ─────────────────────────────────── */
+.icon-img {
+    filter: brightness(0) saturate(100%) invert(72%) sepia(40%) saturate(900%) hue-rotate(217deg) brightness(106%);
+    vertical-align: middle;
+}
+
+body.light-mode .icon-img {
+    filter: brightness(0) saturate(100%) invert(26%) sepia(85%) saturate(1600%) hue-rotate(251deg) brightness(86%);
+}
+]]>
+</file>
+<file name="app.js">
+<![CDATA[
+// ── DOM cache ─────────────────────────────────────────────────────────────────
+const statusDiv   = document.getElementById('statusMessage');
+const tbody       = document.getElementById('reportTbody');
+const rowCountEl  = document.getElementById('rowCount');
+const downloadBtn = document.getElementById('downloadBtn');
+const fetchBtn          = document.getElementById('fetchBtn');
+const fetchBtnText      = document.getElementById('fetchBtnText');
+const fetchProgressFill = document.getElementById('fetchProgress');
+const dupUrlModal      = document.getElementById('dupUrlModal');
+const dupUrlList       = document.getElementById('dupUrlList');
+const dupUrlConfirmBtn = document.getElementById('dupUrlConfirmBtn');
+const dupUrlCancelBtn  = document.getElementById('dupUrlCancelBtn');
+const heatmapBtn          = document.getElementById('heatmapBtn');
+const heatmapModal        = document.getElementById('heatmapModal');
+const heatmapCloseBtn     = document.getElementById('heatmapCloseBtn');
+const heatmapCourseSelect = document.getElementById('heatmapCourseSelect');
+const heatmapContent      = document.getElementById('heatmapContent');
+const heatmapPrevBtn      = document.getElementById('heatmapPrevBtn');
+const heatmapNextBtn      = document.getElementById('heatmapNextBtn');
+const hmTooltip           = document.getElementById('hmTooltip');
+const scrollFadeBottom      = document.getElementById('scrollFadeBottom');
+const tableScrollWrap       = document.querySelector('.table-scroll-wrap');
+const tabBar                = document.querySelector('.tab-bar');
+const stickyCourseBanner    = document.getElementById('stickyCourseBanner');
+const stickyCourseLinkEl    = document.getElementById('stickyCourseBannerLink');
+const stickyHeatmapBtnEl    = document.getElementById('stickyHeatmapBtn');
+
+// ── State ─────────────────────────────────────────────────────────────────────
+let tableData            = [];
+let allData              = [];
+let teacherData          = [];
+let oerData              = [];
+let snapshotAllData      = [];
+let snapshotTeacherData  = [];
+let snapshotOerData      = [];
+let snapshotHiddenTypes  = new Set();
+let snapshotHiddenYears  = new Set();
+let snapshotHiddenMonths = new Set();
+let activeTab        = 'all'; // 'all' | 'teachers' | 'oer'
+let sortCol          = null;       // null | 'rawTs' | 'fullname' | 'activityName' | 'activityType' | 'subject' | 'strategy'
+let sortDir          = 'asc';      // 'asc' | 'desc'
+let currentRows      = [];
+let activeStrategies = [];
+let activeSubjects   = [];
+let hiddenTypes      = new Set();
+let hiddenYears      = new Set();
+let hiddenMonths     = new Set();
+let filterDropdown     = null;
+let dateFilterDropdown = null;
+let heatmapCourses       = [];
+let heatmapCourseIdx     = 0;
+let hmTooltipHideTimer   = null;
+let courseRegistry       = []; // [{courseGroupIndex, courseId, courseName, courseBaseUrl}] — one entry per fetched course
+
+const PROXY_BASE = 'http://localhost:8080';
+
+function isLocal() {
+    return location.protocol === 'file:' ||
+           location.hostname === 'localhost' ||
+           location.hostname === '127.0.0.1';
+}
+
+function proxyPath() {
+    return isLocal() ? `${PROXY_BASE}/proxy` : '/api/proxy';
+}
+
+function apiProxyUrl(targetUrl) {
+    return `${proxyPath()}?url=${encodeURIComponent(targetUrl)}&accept=application%2Fjson`;
+}
+
+function htmlProxyUrl(targetUrl, cookie) {
+    let u = `${proxyPath()}?url=${encodeURIComponent(targetUrl)}&accept=text%2Fhtml`;
+    if (cookie) u += `&cookie=${encodeURIComponent(cookie)}`;
+    return u;
+}
+
+const MODULE_FULLNAMES = {
+    assign:'Assignment', quiz:'Quiz', forum:'Forum', resource:'File',
+    page:'Page', url:'URL', folder:'Folder', label:'Text and Media Area',
+    choice:'Choice', feedback:'Feedback', lesson:'Lesson',
+    scorm:'SCORM Package', workshop:'Workshop', glossary:'Glossary',
+    chat:'Chat', attendance:'Attendance', bigbluebuttonbn:'BigBlueButton',
+    book:'Book', data:'Database', h5pactivity:'H5P',
+    imscp:'IMS Content Package', lti:'External Tool', survey:'Survey',
+    wiki:'Wiki', hvp:'Interactive Content', questionnaire:'Questionnaire',
+    certificate:'Certificate', customcert:'Custom Certificate',
+    subcourse:'Subcourse', scheduler:'Scheduler', checklist:'Checklist',
+};
+const modFullName = m => MODULE_FULLNAMES[m] || (m ? m.charAt(0).toUpperCase()+m.slice(1) : 'Unknown');
+const MONTH_NAMES  = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+const MONTH_SHORT  = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+
+// ── Strategies — in-memory fallback seed ─────────────────────────────────────
+
+const STRATEGIES = [
+    {name:'assessment-assisted discussion',keywords:['assessment-assisted']},
+    {name:'collaborative learning',keywords:['collaborative']},
+    {name:'content discussion',keywords:['content discussion']},
+    {name:'drill/practice/exercise',keywords:['drill','practice','exercise']},
+    {name:'election',keywords:['election']},
+    {name:'enrichment',keywords:['enrichment']},
+    {name:'entrance exam',keywords:['entrance exam','entrance']},
+    {name:'evaluation - student',keywords:['evaluation student']},
+    {name:'evaluation - student services',keywords:['evaluation student services']},
+    {name:'evaluation - teacher',keywords:['evaluation teacher']},
+    {name:'evaluation - parents',keywords:['evaluation parents']},
+    {name:'family day',keywords:['family day']},
+    {name:'focus group discussion',keywords:['focus group','fgd']},
+    {name:'formative assessment',keywords:['formative']},
+    {name:'game',keywords:['game']},
+    {name:'interactive lecture demonstration',keywords:['interactive lecture','ild']},
+    {name:'listening activity',keywords:['listening']},
+    {name:'motivation',keywords:['motivation']},
+    {name:'peer assessment',keywords:['peer assessment','peer']},
+    {name:'performance task',keywords:['performance task','pt']},
+    {name:'Playground',keywords:['playground']},
+    {name:'post-assessment',keywords:['post-assessment','post assessment','posttest']},
+    {name:'pre-assessment',keywords:['pre-assessment','pre assessment','pretest']},
+    {name:'project presentation',keywords:['project presentation','project']},
+    {name:'quiz bee',keywords:['quiz bee']},
+    {name:'reading activity',keywords:['reading']},
+    {name:'reference material',keywords:['reference']},
+    {name:'remediation',keywords:['remediation']},
+    {name:'research',keywords:['research']},
+    {name:'reviewer',keywords:['reviewer']},
+    {name:'self-assessment',keywords:['self-assessment','self assessment']},
+    {name:'speaking activity',keywords:['speaking']},
+    {name:'sports fest',keywords:['sports fest','sports']},
+    {name:'stakeholders engagement',keywords:['stakeholders']},
+    {name:'summative assessment',keywords:['summative']},
+    {name:'synchronous discussion',keywords:['synchronous']},
+    {name:'tutorial',keywords:['tutorial']},
+    {name:'viewing activity',keywords:['viewing']},
+    {name:'lab activity',keywords:['lab']},
+    {name:'writing activity',keywords:['writing']},
+    {name:'file upload and monitoring sheet',keywords:['monitoring sheet','file upload']},
+    {name:'periodic test',keywords:['periodic test','periodic']},
+    {name:'summary of scores',keywords:['summary of scores','summary']},
+];
+
+async function loadStrategies() {
+    try {
+        const res = await fetch(isLocal() ? '/strategies' : '/api/strategies');
+        if (!res.ok) throw new Error();
+        const data = await res.json();
+        activeStrategies = data.strategies;
+    } catch (_) {
+        activeStrategies = STRATEGIES;
+    }
+}
+
+function getStrategy(activityName) {
+    const name = (activityName || '').toLowerCase();
+    for (const s of activeStrategies) {
+        if (s.keywords?.some(kw => name.includes(kw.toLowerCase()))) return s.name;
+    }
+    return '';
+}
+
+// ── Subjects — in-memory fallback seed ───────────────────────────────────────
+
+const DEFAULT_SUBJECTS = [
+    { name:'Christian Living and Values Education', keywords:['Christian Living','Values Education','CLE'], isDefault:true },
+    { name:'Computer',      keywords:['Computer','ICT','Programming'],               isDefault:true },
+    { name:'English',       keywords:['English','Reading'],                          isDefault:true },
+    { name:'Filipino',      keywords:['Filipino','Tagalog'],                         isDefault:true },
+    { name:'MAPEH',         keywords:['MAPEH','Music','Arts','PE','Health'],          isDefault:true },
+    { name:'Mathematics',   keywords:['Math','Mathematics','Algebra','Geometry'],    isDefault:true },
+    { name:'Science',       keywords:['Science','Physics','Chemistry','Biology'],    isDefault:true },
+    { name:'Social Studies',keywords:['Social Studies','History','Geography'],       isDefault:true },
+    { name:'TLE',           keywords:['TLE','Technology','Livelihood'],              isDefault:true },
+];
+
+async function loadSubjects() {
+    try {
+        const res = await fetch(isLocal() ? '/subjects' : '/api/subjects');
+        if (!res.ok) throw new Error();
+        const data = await res.json();
+        activeSubjects = data.subjects;
+    } catch (_) {
+        activeSubjects = DEFAULT_SUBJECTS;
+    }
+}
+
+function getSubject(courseName) {
+    const name = (courseName || '').toLowerCase();
+    for (const s of activeSubjects) {
+        if (s.keywords?.some(kw => name.includes(kw.toLowerCase()))) return s.name;
+    }
+    return 'Uncategorized';
+}
+
+// ── UI helpers ────────────────────────────────────────────────────────────────
+
+function isDarkMode() {
+    return !document.body.classList.contains('light-mode');
+}
+
+function setStatus(msg, isError=false) {
+    statusDiv.textContent = msg;
+    statusDiv.className = `status-msg${isError ? ' status-msg--error' : ''}`;
+}
+
+function setBtnLoading(text = 'Fetching…', frac = 0) {
+    fetchBtn.disabled = true;
+    fetchBtn.className = 'tech-btn btn-full btn-loading';
+    fetchBtnText.textContent = text;
+    fetchProgressFill.style.width = Math.min(Math.round(frac * 100), 100) + '%';
+}
+
+function setBtnDefault() {
+    fetchProgressFill.style.transition = 'none';
+    fetchProgressFill.style.width = '0%';
+    requestAnimationFrame(() => { fetchProgressFill.style.transition = ''; });
+    fetchBtn.disabled = false;
+    fetchBtn.className = 'tech-btn btn-full';
+    fetchBtnText.textContent = 'Generate';
+}
+
+function setBtnSuccess(text = '✓ Done') {
+    fetchProgressFill.style.width = '100%';
+    fetchBtn.disabled = false;
+    fetchBtn.className = 'tech-btn btn-full btn-success';
+    fetchBtnText.textContent = text;
+    setTimeout(setBtnDefault, 2000);
+}
+
+function setBtnError(text = '✗ Failed') {
+    fetchProgressFill.style.width = '100%';
+    fetchBtn.disabled = false;
+    fetchBtn.className = 'tech-btn btn-full btn-error';
+    fetchBtnText.textContent = text;
+    setTimeout(setBtnDefault, 2500);
+}
+
+function escapeHtml(s) {
+    if (!s) return '';
+    return String(s).replace(/[&<>"']/g, c =>
+        ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+}
+
+function formatDate(ts) {
+    if (!ts || ts === 0) return 'N/A';
+    const n = Number(ts);
+    if (isNaN(n) || n <= 0) return 'N/A';
+    const d = n > 1e10 ? new Date(n) : new Date(n * 1000);
+    if (isNaN(d.getTime())) return 'N/A';
+    const mm = String(d.getMonth()+1).padStart(2,'0');
+    const dd = String(d.getDate()).padStart(2,'0');
+    return `${mm}/${dd}/${d.getFullYear()}`;
+}
+
+function parseDateStrToTs(s) {
+    if (!s || s === 'N/A') return 0;
+    const m = s.match(/^(\d{2})\/(\d{2})\/(\d{4})$/);
+    if (!m) return 0;
+    const d = new Date(parseInt(m[3],10), parseInt(m[1],10)-1, parseInt(m[2],10));
+    return isNaN(d.getTime()) ? 0 : Math.floor(d.getTime()/1000);
+}
+
+const FILE_CATS = {
+    apk:'Application', exe:'Application', msi:'Application', dmg:'Application',
+    deb:'Application', rpm:'Application', jar:'Application', bat:'Application',
+    mp3:'Audio', wav:'Audio', ogg:'Audio', flac:'Audio', aac:'Audio',
+    m4a:'Audio', wma:'Audio', opus:'Audio',
+    pdf:'Documents', doc:'Documents', docx:'Documents', xls:'Documents',
+    xlsx:'Documents', txt:'Documents', rtf:'Documents', odt:'Documents',
+    ods:'Documents', csv:'Documents',
+    jpg:'Image', jpeg:'Image', png:'Image', gif:'Image', bmp:'Image',
+    svg:'Image', webp:'Image', tiff:'Image', tif:'Image', ico:'Image',
+    ppt:'Presentation', pptx:'Presentation', odp:'Presentation', key:'Presentation',
+    mp4:'Video', avi:'Video', mov:'Video', mkv:'Video', wmv:'Video',
+    flv:'Video', webm:'Video', m4v:'Video', '3gp':'Video',
+};
+
+function fileExtension(mod) {
+    if (!mod?.contents) return null;
+    for (const c of mod.contents) {
+        if (c.filename) {
+            const p = c.filename.split('.');
+            if (p.length > 1) { const e = p.pop().toLowerCase(); if (e.length <= 5) return e; }
+        }
+    }
+    return null;
+}
+
+function activityTypeLabel(modname, mod) {
+    if (!modname) return 'Unknown';
+    if (modname === 'resource') {
+        if (mod?.name && /presentation/i.test(mod.name)) return 'File - Presentation';
+        if (mod?.contents) {
+            for (const c of mod.contents) {
+                if (c.filename && /presentation/i.test(c.filename)) return 'File - Presentation';
+            }
+        }
+        const ext = fileExtension(mod);
+        if (ext) {
+            const cat = FILE_CATS[ext];
+            return cat ? `File - ${cat}` : `File - ${ext.toUpperCase()}`;
+        }
+        return 'File';
+    }
+    return modFullName(modname);
+}
+
+function activityViewUrl(mod, baseUrl) {
+    const id = mod.id || mod.instance;
+    return (id && mod.modname) ? `${baseUrl}/mod/${mod.modname}/view.php?id=${id}` : null;
+}
+
+function buildLogUrl(baseUrl, courseId, modId, page) {
+    let u = `${baseUrl}/report/log/index.php?chooselog=1&showusers=0&showcourses=0` +
+            `&id=${courseId}&group=&user=&date=&modid=${modId}&modaction=c` +
+            `&origin=&edulevel=-1&logreader=logstore_standard`;
+    if (page > 0) u += `&page=${page}`;
+    return u;
+}
+
+// ── WS API ────────────────────────────────────────────────────────────────────
+
+async function apiFetch(baseUrl, token, fn, extra={}) {
+    const p = new URLSearchParams({wstoken:token, wsfunction:fn, moodlewsrestformat:'json', ...extra});
+    const rawUrl = `${baseUrl}/webservice/rest/server.php?${p}`;
+    const res = await fetch(apiProxyUrl(rawUrl), {headers:{Accept:'application/json'}});
+    if (!res.ok) throw new Error(`HTTP ${res.status}: ${res.statusText}`);
+    const data = await res.json();
+    if (data?.exception) throw new Error(data.message || data.exception);
+    if (data?.error)     throw new Error(data.error);
+    return data;
+}
+
+async function fetchCourseName(baseUrl, token, courseId) {
+    try {
+        const p = new URLSearchParams({wstoken:token, wsfunction:'core_course_get_courses', moodlewsrestformat:'json'});
+        p.append('options[ids][0]', String(courseId));
+        const rawUrl = `${baseUrl}/webservice/rest/server.php?${p}`;
+        const res = await fetch(apiProxyUrl(rawUrl), {headers:{Accept:'application/json'}});
+        const data = await res.json();
+        if (Array.isArray(data) && data.length > 0) return data[0].fullname || data[0].shortname || null;
+    } catch(_) {}
+    return null;
+}
+
+async function fetchFirstAccessor(baseUrl, token, courseId) {
+    try {
+        const data = await apiFetch(baseUrl, token, 'core_enrol_get_enrolled_users', {courseid:String(courseId)});
+        if (Array.isArray(data) && data.length > 0) {
+            const pool = data.filter(u => u.firstaccess > 0);
+            const src = pool.length > 0 ? pool : data;
+            src.sort((a,b) => (a.firstaccess||0)-(b.firstaccess||0));
+            const u = src[0];
+            if (u?.fullname) return {fullname:u.fullname, profileUrl:`${baseUrl}/user/profile.php?id=${u.id}`};
+        }
+    } catch(_) {}
+    return null;
+}
+
+// ── Log helpers — JSON download ───────────────────────────────────────────────
+
+function parseMoodleJsonDate(timeStr) {
+    if (!timeStr) return null;
+    const s = timeStr.replace(/\\/g, '');
+    // Moodle format: DD/MM/YY, HH:MM:SS  →  MM/DD/YYYY
+    const m = s.match(/^(\d{1,2})\/(\d{1,2})\/(\d{2,4})/);
+    if (!m) return null;
+    const day = m[1].padStart(2, '0');
+    const mon = m[2].padStart(2, '0');
+    const yr  = m[3].length === 2 ? `20${m[3]}` : m[3];
+    if (isNaN(new Date(`${yr}-${mon}-${day}`).getTime())) return null;
+    return `${mon}/${day}/${yr}`;
+}
+
+function parseMoodleJsonTs(timeStr) {
+    if (!timeStr) return 0;
+    const s = timeStr.replace(/\\/g, '');
+    const m = s.match(/^(\d{1,2})\/(\d{1,2})\/(\d{2,4}),?\s*(\d{2}):(\d{2}):(\d{2})/);
+    if (!m) return 0;
+    const yr = m[3].length === 2 ? `20${m[3]}` : m[3];
+    const d  = new Date(`${yr}-${m[2].padStart(2,'0')}-${m[1].padStart(2,'0')}T${m[4]}:${m[5]}:${m[6]}`);
+    return isNaN(d.getTime()) ? 0 : Math.floor(d.getTime() / 1000);
+}
+
+async function fetchSesskey(baseUrl, courseId, sessionCookie) {
+    try {
+        const pageUrl  = `${baseUrl}/course/view.php?id=${courseId}`;
+        const proxyUrl = isLocal()
+            ? `${PROXY_BASE}/proxy?url=${encodeURIComponent(pageUrl)}&accept=text%2Fhtml&cookie=${encodeURIComponent(sessionCookie)}`
+            : pageUrl;
+        const controller = new AbortController();
+        const timer = setTimeout(() => controller.abort(), 15000);
+        try {
+            const res = await fetch(proxyUrl, { signal: controller.signal });
+            if (!res.ok) return null;
+            const m = (await res.text()).match(/"sesskey":"([a-zA-Z0-9]+)"/);
+            return m ? m[1] : null;
+        } finally { clearTimeout(timer); }
+    } catch (_) { return null; }
+}
+
+async function fetchModuleLogsJson(baseUrl, courseId, cmid, sesskey, sessionCookie, modaction = 'c') {
+    const actionParam = modaction ? `&modaction=${encodeURIComponent(modaction)}` : '';
+    const targetUrl =
+        `${baseUrl}/report/log/index.php?chooselog=1&showusers=0&showcourses=0` +
+        `&id=${courseId}&group=&user=&date=&modid=${cmid}${actionParam}&origin=` +
+        `&edulevel=-1&logreader=logstore_standard&download=json&sesskey=${sesskey}`;
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), 30000);
+    try {
+        const proxyUrl = isLocal()
+            ? `${PROXY_BASE}/proxy?url=${encodeURIComponent(targetUrl)}&accept=application%2Fjson&cookie=${encodeURIComponent(sessionCookie)}`
+            : targetUrl;
+        const res = await fetch(proxyUrl, { signal: controller.signal });
+        if (!res.ok) return null;
+        const parsed = JSON.parse(await res.text());
+        return Array.isArray(parsed[0]) ? parsed[0] : (Array.isArray(parsed) ? parsed : []);
+    } catch (_) { return null; }
+    finally { clearTimeout(timer); }
+}
+
+async function scrapeLogPage(baseUrl, courseId, cmid, sesskey, sessionCookie) {
+    // Step 1: creation-only fetch (modaction=c) — fast, targeted
+    const creationEntries = await fetchModuleLogsJson(baseUrl, courseId, cmid, sesskey, sessionCookie, 'c');
+    if (creationEntries?.length) {
+        const created = creationEntries.find(e => e.eventname === 'Course module created');
+        if (created) {
+            const date = parseMoodleJsonDate(created.time || '');
+            const fullname = created.userfullname || '';
+            let profileUrl = '';
+            const uid = (created.description || '').match(/user with id '(\d+)'/);
+            if (uid) profileUrl = `${baseUrl}/user/profile.php?id=${uid[1]}`;
+            return { date: date || '', fullname, profileUrl, dateSource: 'VERIFIED', eventLabel: 'Course module created' };
+        }
+    }
+
+    // Step 2: broad all-events fetch — only reached when Step 1 returns nothing
+    const allEntries = await fetchModuleLogsJson(baseUrl, courseId, cmid, sesskey, sessionCookie, '');
+    if (allEntries?.length) {
+        const withTs = allEntries
+            .map(e => ({ ...e, _ts: parseMoodleJsonTs(e.time) }))
+            .filter(e => e._ts > 0)
+            .sort((a, b) => a._ts - b._ts);
+        if (withTs.length > 0) {
+            const oldest = withTs[0];
+            const date = parseMoodleJsonDate(oldest.time || '');
+            const fullname = oldest.userfullname || '';
+            let profileUrl = '';
+            const uid = (oldest.description || '').match(/user with id '(\d+)'/);
+            if (uid) profileUrl = `${baseUrl}/user/profile.php?id=${uid[1]}`;
+            return { date: date || '', fullname, profileUrl, dateSource: 'INFERRED', eventLabel: `First access: ${oldest.eventname || 'user access'}` };
+        }
+    }
+
+    return null;
+}
+
+// ── Build rows ────────────────────────────────────────────────────────────────
+
+async function buildRows(sections, baseUrl, courseId, sessionCookie, fallbackUser, courseName, detectedSubject, courseGroupIndex, onProgress) {
+    const allMods = sections.flatMap(s => s.modules || []);
+    const total   = allMods.length;
+    let done = 0;
+
+    onProgress?.(0, `Fetching sesskey…`);
+    const sesskey = await fetchSesskey(baseUrl, courseId, sessionCookie);
+    if (!sesskey) setStatus('Warning: could not fetch sesskey — log dates may be unavailable.');
+
+    onProgress?.(0, `Fetching ${total} log pages…`);
+
+    const BATCH = 6;
+    const results = new Array(allMods.length);
+
+    for (let start = 0; start < allMods.length; start += BATCH) {
+        const slice = allMods.slice(start, start + BATCH);
+        const settled = await Promise.allSettled(
+            slice.map(mod => scrapeLogPage(baseUrl, courseId, mod.id, sesskey, sessionCookie))
+        );
+        settled.forEach((r, i) => { results[start + i] = r.value ?? null; });
+        done += slice.length;
+        onProgress?.(total > 0 ? done / total : 1, `${done}/${total} modules`);
+    }
+
+    const rows = allMods.map((mod, i) => {
+        const logData    = results[i];
+        const dateSource = logData?.dateSource || 'ESTIMATED';
+        const eventLabel = logData?.eventLabel || 'Module metadata (mod.added)';
+        return {
+            date:             logData?.date      || formatDate(mod.added || mod.timecreated || mod.timemodified || 0),
+            rawTs:            parseDateStrToTs(logData?.date) || mod.added || mod.timecreated || 0,
+            dateSource,
+            eventLabel,
+            fromLog:          dateSource === 'VERIFIED',
+            fullname:         logData?.fullname   || fallbackUser?.fullname   || 'Unknown',
+            profileUrl:       logData?.profileUrl || fallbackUser?.profileUrl || null,
+            activityName:     mod.name            || `Unnamed ${mod.modname}`,
+            activityUrl:      activityViewUrl(mod, baseUrl),
+            activityType:     activityTypeLabel(mod.modname, mod),
+            strategy:         getStrategy(mod.name || ''),
+            subject:          detectedSubject,
+            modname:          mod.modname         || '',
+            courseIndex:      i,
+            courseGroupIndex: courseGroupIndex,
+            courseId:         courseId,
+            courseName:       courseName || `Course ${courseId}`,
+            courseBaseUrl:    baseUrl,
+            logUrl:           buildLogUrl(baseUrl, courseId, mod.id),
+        };
+    });
+
+    return rows;
+}
+
+// ── Row exclusion ─────────────────────────────────────────────────────────────
+
+function isExcludedRow(r) {
+    const isAnnouncementForum =
+        /announcement/i.test(r.activityName || '') &&
+        (r.activityType || '').toLowerCase() === 'forum';
+    return isAnnouncementForum && (r.dateSource === 'ESTIMATED' || !r.date || r.dateSource === 'INFERRED');
+}
+
+// ── Deduplication ────────────────────────────────────────────────────────────
+
+function deduplicateActivityNames(rows) {
+    const seen = new Map();
+    for (const r of rows) {
+        const key = `${r.courseGroupIndex}::${r.activityName}`;
+        const n = (seen.get(key) || 0) + 1;
+        seen.set(key, n);
+        if (n > 1) r.activityName = `${r.activityName} (${n})`;
+    }
+}
+
+// ── Sort ──────────────────────────────────────────────────────────────────────
+
+function applyHeaderSort(rows) {
+    if (!sortCol) return [...rows];
+    const sorted = [...rows];
+    sorted.sort((a, b) => {
+        if (sortCol === 'rawTs') {
+            return sortDir === 'asc' ? a.rawTs - b.rawTs : b.rawTs - a.rawTs;
+        }
+        const va = String(a[sortCol] || '').toLowerCase();
+        const vb = String(b[sortCol] || '').toLowerCase();
+        const cmp = va.localeCompare(vb);
+        return sortDir === 'asc' ? cmp : -cmp;
+    });
+    return sorted;
+}
+
+function getActiveRows() {
+    if (activeTab === 'oer')      return oerData;
+    if (activeTab === 'teachers') return teacherData;
+    return allData;
+}
+
+// ── Render ────────────────────────────────────────────────────────────────────
+
+function buildDataRow(row, idx) {
+    const dark = isDarkMode();
+    const tr = document.createElement('tr');
+    tr.style.borderBottom = dark ? '1px solid rgba(139,92,246,.07)' : '1px solid #f1f5f9';
+    tr.onmouseenter = () => tr.style.background = dark ? 'rgba(139,92,246,.06)' : '#f0f9ff';
+    tr.onmouseleave = () => tr.style.background = '';
+
+    const tdNum = document.createElement('td');
+    tdNum.className = 'td-num';
+    tdNum.style.color = dark ? 'rgba(148,163,184,.5)' : '#94a3b8';
+    tdNum.textContent = idx;
+
+    const tdDate = document.createElement('td');
+    tdDate.className = 'td-date';
+    const BADGE_TEXT = { VERIFIED:'LOG', INFERRED:'FIRST', ESTIMATED:'EST' };
+    const badgeType  = (row.dateSource || 'ESTIMATED').toLowerCase();
+    const badge = `<span class="date-badge date-badge-${badgeType}" title="Source: ${escapeHtml(row.eventLabel || '')}">${BADGE_TEXT[row.dateSource] || 'EST'}</span>`;
+    tdDate.innerHTML = `<span class="date-chip">${escapeHtml(row.date)}</span>${badge}`;
+
+    const tdUser = document.createElement('td');
+    tdUser.className = 'td-cell';
+    tdUser.innerHTML = row.profileUrl
+        ? `<a href="${escapeHtml(row.profileUrl)}" target="_blank" rel="noopener" class="table-link" style="color:${dark ? '#a78bfa' : '#0369a1'}">${escapeHtml(row.fullname)}</a>`
+        : `<span style="color:${dark ? 'rgba(196,181,253,.75)' : '#475569'}">${escapeHtml(row.fullname)}</span>`;
+
+    const tdName = document.createElement('td');
+    tdName.className = 'td-cell';
+    tdName.innerHTML = row.activityUrl
+        ? `<a href="${escapeHtml(row.activityUrl)}" target="_blank" rel="noopener" class="table-link" style="color:${dark ? '#c4b5fd' : '#7c3aed'}">${escapeHtml(row.activityName)}</a>`
+        : `<span class="table-text-muted" style="color:${dark ? '#e2e8f0' : '#334155'}">${escapeHtml(row.activityName)}</span>`;
+
+    const tdType = document.createElement('td');
+    tdType.className = 'td-cell';
+    tdType.innerHTML = `<span class="activity-type-chip">${escapeHtml(row.activityType)}</span>`;
+
+    const tdSubject = document.createElement('td');
+    tdSubject.className = 'td-cell';
+    const subjectLink = document.createElement('a');
+    subjectLink.href    = `${row.courseBaseUrl}/course/view.php?id=${row.courseId}`;
+    subjectLink.target  = '_blank';
+    subjectLink.rel     = 'noopener';
+    subjectLink.title   = row.courseName || '';
+    subjectLink.textContent = row.subject || 'Uncategorized';
+    subjectLink.className = 'subject-link';
+    subjectLink.style.color = dark ? '#a78bfa' : '#7c3aed';
+    subjectLink.onmouseover = () => subjectLink.style.textDecoration = 'underline';
+    subjectLink.onmouseout  = () => subjectLink.style.textDecoration = 'none';
+    tdSubject.appendChild(subjectLink);
+
+    const tdStrategy = document.createElement('td');
+    tdStrategy.className = 'td-strategy';
+    const strategySel = document.createElement('select');
+    strategySel.className = 'strategy-sel';
+    strategySel.title = row.strategy || '';
+    const stratBlank = document.createElement('option');
+    stratBlank.value = '';
+    stratBlank.textContent = '—';
+    strategySel.appendChild(stratBlank);
+    for (const s of activeStrategies) {
+        const opt = document.createElement('option');
+        opt.value = s.name;
+        opt.textContent = s.name;
+        if (s.name === row.strategy) opt.selected = true;
+        strategySel.appendChild(opt);
+    }
+    strategySel.addEventListener('change', () => {
+        row.strategy = strategySel.value;
+        strategySel.title = strategySel.value;
+    });
+    tdStrategy.appendChild(strategySel);
+
+    const tdLog = document.createElement('td');
+    tdLog.className = 'td-log';
+    tdLog.innerHTML = `<a href="${escapeHtml(row.logUrl)}" target="_blank" rel="noopener" class="log-btn" title="View logs">
+        <img src="src/icons/external-link.svg" width="13" height="13" class="icon-img" alt="">
+    </a>`;
+
+    tr.append(tdNum, tdDate, tdUser, tdType, tdName, tdSubject, tdStrategy, tdLog);
+    return tr;
+}
+
+function updateStickyCourseBanner() {
+    if (!stickyCourseBanner) return;
+    const tabBarRect = tabBar ? tabBar.getBoundingClientRect() : null;
+    if (!tabBarRect || tabBarRect.top > 2) { stickyCourseBanner.style.display = 'none'; return; }
+    const bannerTop = parseFloat(stickyCourseBanner.style.top) || tabBarRect.bottom;
+    const seps = Array.from(document.querySelectorAll('tr[data-sep-idx]'));
+    let active = null;
+    for (const sep of seps) {
+        if (sep.getBoundingClientRect().top < bannerTop) active = sep;
+    }
+    if (active) {
+        stickyCourseBanner.style.display = '';
+        stickyCourseLinkEl.href          = active.dataset.courseUrl || '#';
+        stickyCourseLinkEl.textContent   = active.dataset.courseName || '';
+        stickyHeatmapBtnEl.dataset.groupIdx = active.dataset.sepIdx;
+    } else {
+        stickyCourseBanner.style.display = 'none';
+    }
+}
+
+function updateScrollFade() {
+    if (!scrollFadeBottom || !tableScrollWrap) return;
+    const atBottom = tableScrollWrap.scrollTop + tableScrollWrap.clientHeight >= tableScrollWrap.scrollHeight - 8;
+    scrollFadeBottom.classList.toggle('scroll-fade-bottom--hidden', atBottom);
+}
+
+function renderTable(rows) {
+    currentRows = rows || [];
+    const NCOLS = 8; // #, Date, User, Activity Name, Activity Type, Subject, Strategy, Logs
+    tbody.innerHTML = '';
+    const frag = document.createDocumentFragment();
+    const showSeparators = sortCol === null;
+    let visibleIdx = 0;
+
+    if (!showSeparators) {
+        if (!rows?.length) {
+            tbody.innerHTML = `<tr><td colspan="${NCOLS}" class="empty-state-cell">No activities found.</td></tr>`;
+            rowCountEl.textContent = '0 entries';
+            return;
+        }
+        rows.forEach(row => { visibleIdx++; frag.appendChild(buildDataRow(row, visibleIdx)); });
+    } else {
+        // Ordered unique courses from courseRegistry (includes courses with 0 modules)
+        const courseGroups = courseRegistry;
+
+        if (!courseGroups.length) {
+            tbody.innerHTML = `<tr><td colspan="${NCOLS}" class="empty-state-cell">No activities found.</td></tr>`;
+            rowCountEl.textContent = '0 entries';
+            return;
+        }
+
+        // Filtered rows keyed by course
+        const rowsByGroup = new Map();
+        (rows || []).forEach(r => {
+            if (!rowsByGroup.has(r.courseGroupIndex)) rowsByGroup.set(r.courseGroupIndex, []);
+            rowsByGroup.get(r.courseGroupIndex).push(r);
+        });
+
+        courseGroups.forEach(cg => {
+            const sepTr = document.createElement('tr');
+            sepTr.dataset.sepIdx     = String(cg.courseGroupIndex);
+            sepTr.dataset.courseUrl  = `${cg.courseBaseUrl}/course/view.php?id=${cg.courseId}`;
+            sepTr.dataset.courseName = cg.courseName;
+            const sepTd = document.createElement('td');
+            sepTd.colSpan = NCOLS;
+            sepTd.className = 'course-sep-cell';
+
+            const iconBtn = document.createElement('button');
+            iconBtn.className = 'tech-btn btn-icon-only course-sep-heatmap-btn';
+            iconBtn.title = 'View activity heatmap';
+            const iconImg = document.createElement('img');
+            iconImg.src = 'src/icons/book-open-check.svg';
+            iconImg.width = 13;
+            iconImg.height = 13;
+            iconImg.className = 'icon-img';
+            iconImg.alt = '';
+            iconBtn.appendChild(iconImg);
+            iconBtn.addEventListener('click', e => {
+                e.preventDefault();
+                e.stopPropagation();
+                openHeatmapModal(cg.courseGroupIndex);
+            });
+
+            const link = document.createElement('a');
+            link.href = `${cg.courseBaseUrl}/course/view.php?id=${cg.courseId}`;
+            link.target = '_blank';
+            link.rel = 'noopener';
+            link.className = 'course-sep-link';
+            link.textContent = cg.courseName;
+
+            const sepInner = document.createElement('div');
+            sepInner.className = 'course-sep-inner';
+            sepInner.appendChild(iconBtn);
+            sepInner.appendChild(link);
+            sepTd.appendChild(sepInner);
+            sepTr.appendChild(sepTd);
+            frag.appendChild(sepTr);
+
+            const courseRows = rowsByGroup.get(cg.courseGroupIndex) || [];
+            if (!courseRows.length) {
+                const emptyTr = document.createElement('tr');
+                const emptyTd = document.createElement('td');
+                emptyTd.colSpan = NCOLS;
+                emptyTd.className = 'course-empty-cell';
+                emptyTd.textContent = 'No data.';
+                emptyTr.appendChild(emptyTd);
+                frag.appendChild(emptyTr);
+            } else {
+                courseRows.forEach(row => { visibleIdx++; frag.appendChild(buildDataRow(row, visibleIdx)); });
+            }
+        });
+    }
+
+    tbody.appendChild(frag);
+    rowCountEl.textContent = `${visibleIdx} ${visibleIdx === 1 ? 'entry' : 'entries'}`;
+    requestAnimationFrame(updateScrollFade);
+    requestAnimationFrame(updateStickyCourseBanner);
+    requestAnimationFrame(setTabBarHeight);
+}
+
+function updateTabUI() {
+    const tabs = [
+        { btn: 'tabAll',      count: 'countAll',      key: 'all'      },
+        { btn: 'tabTeachers', count: 'countTeachers', key: 'teachers' },
+        { btn: 'tabOer',      count: 'countOer',      key: 'oer'      },
+    ];
+    tabs.forEach(({ btn, count, key }) => {
+        const tEl = document.getElementById(btn);
+        const cEl = document.getElementById(count);
+        const on  = activeTab === key;
+        tEl.classList.toggle('tab-btn--active', on);
+        cEl.classList.toggle('tab-count--active', on);
+    });
+    setDownloadDisabled(downloadBtn, getActiveRows().length === 0);
+}
+
+function updateHeaderSortUI() {
+    document.querySelectorAll('thead th[data-sort]').forEach(th => {
+        const col = th.dataset.sort;
+        const ind = th.querySelector('.sort-ind');
+        if (!ind) return;
+        if (col === sortCol) {
+            ind.textContent = sortDir === 'asc' ? ' ↑' : ' ↓';
+            ind.style.opacity = '1';
+        } else {
+            ind.textContent = ' ⇅';
+            ind.style.opacity = '0.35';
+        }
+    });
+}
+
+function applyAndRender() {
+    const sorted = applyHeaderSort(getActiveRows());
+    let rows = hiddenTypes.size > 0 ? sorted.filter(r => !hiddenTypes.has(r.activityType)) : sorted;
+    if (hiddenYears.size > 0 || hiddenMonths.size > 0) {
+        rows = rows.filter(r => {
+            const parts = (r.date || '').split('/');
+            if (parts.length !== 3) return true;
+            const [mm, , yyyy] = parts;
+            return !hiddenYears.has(yyyy) && !hiddenMonths.has(mm);
+        });
+    }
+    renderTable(rows);
+    updateTabUI();
+    updateHeaderSortUI();
+    updateFilterUI();
+    updateDateFilterUI();
+}
+
+function renderActiveTab() {
+    closeFilterDropdown();
+    closeDateFilterDropdown();
+    applyAndRender();
+}
+
+function updateFilterUI() {
+    const icon = document.getElementById('typeFilterIcon');
+    if (icon) icon.classList.toggle('filter-active', hiddenTypes.size > 0);
+}
+
+function updateDateFilterUI() {
+    const icon = document.getElementById('dateFilterIcon');
+    if (icon) icon.classList.toggle('filter-active', hiddenYears.size > 0 || hiddenMonths.size > 0);
+}
+
+function closeFilterDropdown() {
+    if (filterDropdown) { filterDropdown.remove(); filterDropdown = null; }
+}
+
+function closeDateFilterDropdown() {
+    if (dateFilterDropdown) { dateFilterDropdown.remove(); dateFilterDropdown = null; }
+}
+
+// ── Heatmap modal ─────────────────────────────────────────────────────────────
+
+function openHeatmapModal(targetGroupIndex = null) {
+    if (!courseRegistry.length) return;
+
+    // Row data per course comes from currentRows (respects active tab + filters)
+    const rowsByGroup = new Map();
+    currentRows.forEach(r => {
+        if (!rowsByGroup.has(r.courseGroupIndex)) rowsByGroup.set(r.courseGroupIndex, []);
+        rowsByGroup.get(r.courseGroupIndex).push(r);
+    });
+
+    heatmapCourses = courseRegistry.map(g => ({
+        courseName: g.courseName,
+        rows: rowsByGroup.get(g.courseGroupIndex) || []
+    }));
+
+    heatmapCourseSelect.innerHTML = '';
+    heatmapCourses.forEach((c, i) => {
+        const opt = document.createElement('option');
+        opt.value = i;
+        opt.textContent = c.courseName || `Course ${i + 1}`;
+        heatmapCourseSelect.appendChild(opt);
+    });
+
+    let startIdx = 0;
+    if (targetGroupIndex !== null) {
+        const found = courseRegistry.findIndex(g => g.courseGroupIndex === targetGroupIndex);
+        if (found >= 0) startIdx = found;
+    }
+
+    renderHeatmapForCourse(startIdx);
+    heatmapModal.style.display = 'flex';
+}
+
+function closeHeatmapModal() {
+    heatmapModal.style.display = 'none';
+}
+
+function renderHeatmapForCourse(idx) {
+    heatmapCourseIdx = idx;
+    heatmapCourseSelect.value = idx;
+
+    const { rows } = heatmapCourses[idx];
+
+    heatmapContent.innerHTML = '';
+    if (!rows.length) {
+        const msg = document.createElement('div');
+        msg.className = 'hm-empty-state';
+        msg.textContent = 'No data available for this course.';
+        heatmapContent.appendChild(msg);
+        updateHeatmapNav();
+        return;
+    }
+
+    // Build day-rows map: 'YYYY-MM-DD' → [row, ...]
+    const dayRowsMap = {};
+    rows.forEach(r => {
+        if (!r.rawTs) return;
+        const d   = new Date(r.rawTs * 1000);
+        const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+        if (!dayRowsMap[key]) dayRowsMap[key] = [];
+        dayRowsMap[key].push(r);
+    });
+
+    // Unique years with data, newest first
+    const years = [...new Set(Object.keys(dayRowsMap).map(k => parseInt(k)))].sort((a, b) => b - a);
+
+    years.forEach(year => heatmapContent.appendChild(buildHeatmapYearSection(year, dayRowsMap)));
+    heatmapContent.appendChild(buildHeatmapLegend());
+    updateHeatmapNav();
+}
+
+function buildHeatmapYearSection(year, dayRowsMap) {
+    const today = new Date(); today.setHours(23, 59, 59, 999);
+    const DOW   = ['S', 'M', 'T', 'W', 'T', 'F', 'S'];
+
+    const section = document.createElement('div');
+    section.className = 'hm-year-section';
+
+    const yearLbl = document.createElement('div');
+    yearLbl.className = 'hm-year-label';
+    yearLbl.textContent = year;
+    section.appendChild(yearLbl);
+
+    const calGrid = document.createElement('div');
+    calGrid.className = 'hm-cal-grid';
+
+    for (let m = 0; m < 12; m++) {
+        const card = document.createElement('div');
+        card.className = 'hm-month-card';
+
+        const monthName = document.createElement('div');
+        monthName.className = 'hm-cal-month-name';
+        monthName.textContent = MONTH_SHORT[m];
+
+        // Count entries for this month
+        const monthPrefix = `${year}-${String(m + 1).padStart(2, '0')}-`;
+        const monthCount  = Object.keys(dayRowsMap)
+            .filter(k => k.startsWith(monthPrefix))
+            .reduce((sum, k) => sum + dayRowsMap[k].length, 0);
+        if (monthCount > 0) {
+            const label = `${monthCount} module${monthCount === 1 ? '' : 's'} in ${MONTH_NAMES[m]}`;
+            monthName.addEventListener('mouseenter', () => showHmTooltipSimple(monthName, label));
+            monthName.addEventListener('mouseleave', hideHmTooltip);
+        }
+
+        card.appendChild(monthName);
+
+        const dowRow = document.createElement('div');
+        dowRow.className = 'hm-cal-dow-row';
+        DOW.forEach(lbl => {
+            const el = document.createElement('div');
+            el.className = 'hm-cal-dow-label';
+            el.textContent = lbl;
+            dowRow.appendChild(el);
+        });
+        card.appendChild(dowRow);
+
+        const daysGrid = document.createElement('div');
+        daysGrid.className = 'hm-cal-days-grid';
+
+        const firstDow    = new Date(year, m, 1).getDay();   // 0=Sun
+        const daysInMonth = new Date(year, m + 1, 0).getDate();
+        const totalCells  = Math.ceil((firstDow + daysInMonth) / 7) * 7;
+
+        for (let i = 0; i < totalCells; i++) {
+            const dayNum = i - firstDow + 1;
+            const cell   = document.createElement('div');
+
+            if (dayNum < 1 || dayNum > daysInMonth) {
+                cell.className = 'hm-cal-day hm-cal-day--empty';
+            } else {
+                const d        = new Date(year, m, dayNum);
+                const isFuture = d > today;
+                const key      = `${year}-${String(m + 1).padStart(2, '0')}-${String(dayNum).padStart(2, '0')}`;
+                const cellRows = dayRowsMap[key] || [];
+                const count    = cellRows.length;
+                const level    = count === 0 ? 0 : count <= 3 ? 1 : count <= 6 ? 2 : count <= 10 ? 3 : 4;
+
+                cell.className = isFuture
+                    ? 'hm-cal-day hm-cal-day--future'
+                    : `hm-cal-day hm-level-${level}`;
+
+                const numEl = document.createElement('span');
+                numEl.className = 'hm-cal-day-num';
+                numEl.textContent = dayNum;
+                cell.appendChild(numEl);
+
+                if (!isFuture && count > 0) {
+                    const dateStr = `${MONTH_NAMES[m]} ${dayNum}, ${year}`;
+                    cell.addEventListener('mouseenter', () => showHmTooltip(cell, cellRows, dateStr));
+                    cell.addEventListener('mouseleave', hideHmTooltip);
+                }
+            }
+
+            daysGrid.appendChild(cell);
+        }
+
+        card.appendChild(daysGrid);
+        calGrid.appendChild(card);
+    }
+
+    section.appendChild(calGrid);
+    return section;
+}
+
+function buildHeatmapLegend() {
+    const legend = document.createElement('div');
+    legend.className = 'hm-legend';
+
+    const less = document.createElement('span');
+    less.className = 'hm-legend-label';
+    less.textContent = 'Less';
+    legend.appendChild(less);
+
+    [0, 1, 2, 3, 4].forEach(level => {
+        const cell = document.createElement('div');
+        cell.className = `hm-legend-cell hm-level-${level}`;
+        legend.appendChild(cell);
+    });
+
+    const more = document.createElement('span');
+    more.className = 'hm-legend-label';
+    more.textContent = 'More';
+    legend.appendChild(more);
+
+    return legend;
+}
+
+function showHmTooltip(cell, rows, dateStr) {
+    clearTimeout(hmTooltipHideTimer);
+    if (!hmTooltip) return;
+
+    hmTooltip.querySelector('.hm-tooltip-header').textContent =
+        `${rows.length} module${rows.length === 1 ? '' : 's'} on ${dateStr}`;
+
+    const list = hmTooltip.querySelector('.hm-tooltip-list');
+    list.innerHTML = '';
+    const MAX = 10;
+    rows.slice(0, MAX).forEach(r => {
+        const li = document.createElement('li');
+        if (r.activityUrl) {
+            const a = document.createElement('a');
+            a.href        = r.activityUrl;
+            a.target      = '_blank';
+            a.rel         = 'noopener';
+            a.className   = 'hm-tooltip-link';
+            a.textContent = r.activityName;
+            li.appendChild(a);
+        } else {
+            li.className   = 'hm-tooltip-item';
+            li.textContent = r.activityName;
+        }
+        list.appendChild(li);
+    });
+    if (rows.length > MAX) {
+        const more = document.createElement('li');
+        more.className   = 'hm-tooltip-more';
+        more.textContent = `+${rows.length - MAX} more`;
+        list.appendChild(more);
+    }
+
+    hmTooltip.style.display = 'block';
+
+    const rect = cell.getBoundingClientRect();
+    const ttW  = hmTooltip.offsetWidth  || 220;
+    const ttH  = hmTooltip.offsetHeight || 120;
+
+    let left = rect.right + 8;
+    let top  = rect.top;
+
+    if (left + ttW > window.innerWidth  - 8) left = rect.left  - ttW - 8;
+    if (top  + ttH > window.innerHeight - 8) top  = window.innerHeight - ttH - 8;
+    if (top < 8) top = 8;
+
+    hmTooltip.style.left = left + 'px';
+    hmTooltip.style.top  = top  + 'px';
+}
+
+function showHmTooltipSimple(el, text) {
+    clearTimeout(hmTooltipHideTimer);
+    if (!hmTooltip) return;
+
+    hmTooltip.querySelector('.hm-tooltip-header').textContent = text;
+    hmTooltip.querySelector('.hm-tooltip-list').innerHTML = '';
+
+    hmTooltip.style.display = 'block';
+
+    const rect = el.getBoundingClientRect();
+    const ttW  = hmTooltip.offsetWidth  || 200;
+    const ttH  = hmTooltip.offsetHeight || 36;
+
+    let left = rect.right + 8;
+    let top  = rect.top;
+
+    if (left + ttW > window.innerWidth  - 8) left = rect.left  - ttW - 8;
+    if (top  + ttH > window.innerHeight - 8) top  = window.innerHeight - ttH - 8;
+    if (top < 8) top = 8;
+
+    hmTooltip.style.left = left + 'px';
+    hmTooltip.style.top  = top  + 'px';
+}
+
+function hideHmTooltip() {
+    hmTooltipHideTimer = setTimeout(() => {
+        if (hmTooltip) hmTooltip.style.display = 'none';
+    }, 120);
+}
+
+function updateHeatmapNav() {
+    const idx   = heatmapCourseIdx;
+    const total = heatmapCourses.length;
+    const hasPrev = idx > 0;
+    const hasNext = idx < total - 1;
+
+    heatmapPrevBtn.style.visibility = hasPrev ? 'visible' : 'hidden';
+    heatmapNextBtn.style.visibility = hasNext ? 'visible' : 'hidden';
+
+    if (hasPrev) heatmapPrevBtn.innerHTML = `<img src="src/icons/chevron-left.svg" width="13" height="13" class="icon-img" style="flex-shrink:0" alt=""><span class="hm-nav-label">${escapeHtml(heatmapCourses[idx - 1].courseName)}</span>`;
+    if (hasNext) heatmapNextBtn.innerHTML = `<span class="hm-nav-label">${escapeHtml(heatmapCourses[idx + 1].courseName)}</span><img src="src/icons/chevron-right.svg" width="13" height="13" class="icon-img" style="flex-shrink:0" alt="">`;
+}
+
+function toggleFilterDropdown(anchor) {
+    if (filterDropdown) { closeFilterDropdown(); return; }
+
+    const rows  = getActiveRows();
+    const types = [...new Set(rows.map(r => r.activityType))].sort();
+    if (!types.length) return;
+
+    const dd = document.createElement('div');
+    dd.className = 'filter-dropdown';
+
+    const hdr = document.createElement('div');
+    hdr.className = 'filter-dropdown-header';
+    const hdrText  = document.createElement('span');
+    hdrText.textContent = 'Filter by Type';
+    const resetBtn = document.createElement('button');
+    resetBtn.textContent = 'Show all';
+    resetBtn.className = 'filter-reset-btn';
+    resetBtn.addEventListener('click', e => {
+        e.stopPropagation();
+        hiddenTypes.clear();
+        dd.querySelectorAll('input[type=checkbox]').forEach(cb => { cb.checked = true; });
+        console.log('[filter] reset — showing all types');
+        applyAndRender();
+    });
+    hdr.append(hdrText, resetBtn);
+    dd.appendChild(hdr);
+
+    const list = document.createElement('div');
+    list.className = 'filter-dropdown-list';
+    types.forEach(type => {
+        const lbl = document.createElement('label');
+        lbl.className = 'filter-item';
+        const cb = document.createElement('input');
+        cb.type = 'checkbox';
+        cb.checked = !hiddenTypes.has(type);
+        cb.className = 'filter-checkbox';
+        cb.addEventListener('change', () => {
+            if (cb.checked) hiddenTypes.delete(type); else hiddenTypes.add(type);
+            console.log(`[filter] "${type}" ${cb.checked ? 'shown' : 'hidden'} — hiddenTypes size: ${hiddenTypes.size}`);
+            applyAndRender();
+        });
+        lbl.append(cb, document.createTextNode(type));
+        list.appendChild(lbl);
+    });
+    dd.appendChild(list);
+    dd.addEventListener('click', e => e.stopPropagation());
+    document.body.appendChild(dd);
+    filterDropdown = dd;
+
+    const rect = anchor.getBoundingClientRect();
+    dd.style.left = Math.min(rect.left, window.innerWidth - 230) + 'px';
+    dd.style.top  = (rect.bottom + 6) + 'px';
+
+    setTimeout(() => document.addEventListener('click', closeFilterDropdown, {once: true}), 0);
+}
+
+function toggleDateFilterDropdown(anchor) {
+    if (dateFilterDropdown) { closeDateFilterDropdown(); return; }
+
+    const rows = getActiveRows();
+    const yearSet  = new Set();
+    const monthSet = new Set();
+    rows.forEach(r => {
+        const parts = (r.date || '').split('/');
+        if (parts.length === 3) { monthSet.add(parts[0]); yearSet.add(parts[2]); }
+    });
+    const years  = [...yearSet].sort((a, b) => parseInt(b) - parseInt(a));
+    const months = [...monthSet].sort((a, b) => parseInt(a) - parseInt(b));
+    if (!years.length && !months.length) return;
+
+    const dd = document.createElement('div');
+    dd.className = 'filter-dropdown-date';
+
+    const hdr = document.createElement('div');
+    hdr.className = 'filter-dropdown-header';
+    const hdrText  = document.createElement('span');
+    hdrText.textContent = 'Filter by Date';
+    const clearBtn = document.createElement('button');
+    clearBtn.textContent = 'Show all';
+    clearBtn.className = 'filter-reset-btn';
+    clearBtn.addEventListener('click', e => {
+        e.stopPropagation();
+        hiddenYears.clear();
+        hiddenMonths.clear();
+        dd.querySelectorAll('input[type=checkbox]').forEach(cb => { cb.checked = true; });
+        applyAndRender();
+    });
+    hdr.append(hdrText, clearBtn);
+    dd.appendChild(hdr);
+
+    const list = document.createElement('div');
+    list.className = 'filter-dropdown-list-tall';
+
+    function addSection(title, items, hiddenSet, keyOf, labelOf) {
+        const sHdr = document.createElement('div');
+        sHdr.className = 'filter-section-header';
+        sHdr.textContent = title;
+        list.appendChild(sHdr);
+        items.forEach(item => {
+            const key = keyOf(item);
+            const lbl = document.createElement('label');
+            lbl.className = 'filter-item';
+            const cb = document.createElement('input');
+            cb.type    = 'checkbox';
+            cb.checked = !hiddenSet.has(key);
+            cb.className = 'filter-checkbox';
+            cb.addEventListener('change', () => {
+                if (cb.checked) hiddenSet.delete(key); else hiddenSet.add(key);
+                applyAndRender();
+            });
+            lbl.append(cb, document.createTextNode(labelOf(item)));
+            list.appendChild(lbl);
+        });
+    }
+
+    if (years.length)  addSection('Year',  years,  hiddenYears,  y => y, y => y);
+    if (months.length) addSection('Month', months, hiddenMonths, m => m, m => MONTH_NAMES[parseInt(m, 10) - 1] || m);
+
+    dd.appendChild(list);
+    dd.addEventListener('click', e => e.stopPropagation());
+    document.body.appendChild(dd);
+    dateFilterDropdown = dd;
+
+    const rect = anchor.getBoundingClientRect();
+    dd.style.left = Math.min(rect.left, window.innerWidth - 200) + 'px';
+    dd.style.top  = (rect.bottom + 6) + 'px';
+
+    setTimeout(() => document.addEventListener('click', closeDateFilterDropdown, { once: true }), 0);
+}
+
+function setDownloadDisabled(btn, off) {
+    btn.disabled = off;
+    btn.style.opacity       = off ? '0.35' : '';
+    btn.style.cursor        = off ? 'not-allowed' : '';
+    btn.style.pointerEvents = off ? 'none' : '';
+}
+
+function updateTabCounts() {
+    document.getElementById('countAll').textContent      = allData.length;
+    document.getElementById('countTeachers').textContent = teacherData.length;
+    document.getElementById('countOer').textContent      = oerData.length;
+    setDownloadDisabled(downloadBtn, getActiveRows().length === 0);
+}
+
+// ── CSV ───────────────────────────────────────────────────────────────────────
+
+function coursePrefix(name) {
+    const m = (name || '').match(/^(\d+)\s*-\s*/);
+    return m ? `${m[1]}: ` : '';
+}
+
+function exportCSV(rows, filename, label = '') {
+    if (!rows.length) { setStatus('Nothing to export.', true); return; }
+    const hdr  = ['Date', 'User', 'Activity Type', 'Activity Name', 'Subject', 'Strategy', 'Course Name', 'Activity URL'];
+    const body = rows.map(r => {
+        const prefix = coursePrefix(r.courseName);
+        return [
+            r.date,
+            r.fullname,
+            r.activityType,
+            prefix + r.activityName,
+            r.subject     || '',
+            r.strategy    || '',
+            r.courseName  || '',
+            r.activityUrl || '',
+        ];
+    });
+    const csv = [hdr, ...body].map(r => r.map(c => `"${String(c).replace(/"/g, '""')}"`).join(',')).join('\n');
+    const blob = new Blob(['﻿' + csv], {type: 'text/csv;charset=utf-8;'});
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = filename;
+    document.body.appendChild(a); a.click(); document.body.removeChild(a);
+    setStatus(`Exported ${rows.length} ${label} entries.`);
+}
+
+// ── Per-course processing ─────────────────────────────────────────────────────
+
+async function processCourse({ baseUrl, courseId }, token, sessionCookie, groupIndex, onProgress) {
+    const [courseName, sections, fallbackUser] = await Promise.all([
+        fetchCourseName(baseUrl, token, courseId),
+        apiFetch(baseUrl, token, 'core_course_get_contents', {courseid: String(courseId)}),
+        fetchFirstAccessor(baseUrl, token, courseId),
+    ]);
+    const subject = getSubject(courseName || '');
+    return buildRows(sections, baseUrl, courseId, sessionCookie, fallbackUser, courseName, subject, groupIndex, onProgress);
+}
+
+function resetTable() {
+    if (!snapshotAllData.length) return;
+    allData      = [...snapshotAllData];
+    teacherData  = [...snapshotTeacherData];
+    oerData      = [...snapshotOerData];
+    hiddenTypes  = new Set(snapshotHiddenTypes);
+    hiddenYears  = new Set(snapshotHiddenYears);
+    hiddenMonths = new Set(snapshotHiddenMonths);
+    sortCol      = null;
+    sortDir      = 'asc';
+    activeTab    = 'all';
+    updateTabCounts();
+    updateTabUI();
+    updateFilterUI();
+    updateDateFilterUI();
+    renderActiveTab();
+}
+
+// ── Event listeners ───────────────────────────────────────────────────────────
+
+document.getElementById('tabAll').addEventListener('click', () => {
+    activeTab = 'all';
+    renderActiveTab();
+});
+
+document.getElementById('tabTeachers').addEventListener('click', () => {
+    activeTab = 'teachers';
+    renderActiveTab();
+});
+
+document.getElementById('tabOer').addEventListener('click', () => {
+    activeTab = 'oer';
+    renderActiveTab();
+});
+
+document.getElementById('resetBtn').addEventListener('click', resetTable);
+
+if (tableScrollWrap) {
+    tableScrollWrap.addEventListener('scroll', updateScrollFade, { passive: true });
+    tableScrollWrap.addEventListener('scroll', updateStickyCourseBanner, { passive: true });
+}
+window.addEventListener('scroll', updateStickyCourseBanner, { passive: true });
+if (stickyHeatmapBtnEl) stickyHeatmapBtnEl.addEventListener('click', e => {
+    e.preventDefault();
+    e.stopPropagation();
+    const idx = parseInt(stickyHeatmapBtnEl.dataset.groupIdx, 10);
+    if (!isNaN(idx)) openHeatmapModal(idx);
+});
+
+function setTabBarHeight() {
+    const tbH = tabBar ? tabBar.getBoundingClientRect().height : 0;
+    if (tabBar) document.documentElement.style.setProperty('--tab-bar-h', tbH + 'px');
+    if (stickyCourseBanner) {
+        const thead = document.querySelector('.report-table thead');
+        const thH = thead ? thead.getBoundingClientRect().height : 0;
+        stickyCourseBanner.style.top = (tbH + thH) + 'px';
+        if (tableScrollWrap) {
+            const rect = tableScrollWrap.getBoundingClientRect();
+            stickyCourseBanner.style.left  = rect.left + 'px';
+            stickyCourseBanner.style.width = rect.width + 'px';
+        }
+    }
+}
+setTabBarHeight();
+window.addEventListener('resize', setTabBarHeight);
+
+heatmapBtn.addEventListener('click', openHeatmapModal);
+heatmapCloseBtn.addEventListener('click', closeHeatmapModal);
+heatmapModal.addEventListener('click', e => { if (e.target === heatmapModal) closeHeatmapModal(); });
+heatmapCourseSelect.addEventListener('change', () => renderHeatmapForCourse(+heatmapCourseSelect.value));
+heatmapPrevBtn.addEventListener('click', () => renderHeatmapForCourse(heatmapCourseIdx - 1));
+heatmapNextBtn.addEventListener('click', () => renderHeatmapForCourse(heatmapCourseIdx + 1));
+hmTooltip.addEventListener('mouseenter', () => clearTimeout(hmTooltipHideTimer));
+hmTooltip.addEventListener('mouseleave', hideHmTooltip);
+
+downloadBtn.addEventListener('click', () => {
+    const sorted = applyHeaderSort(getActiveRows());
+    let rows = hiddenTypes.size > 0 ? sorted.filter(r => !hiddenTypes.has(r.activityType)) : sorted;
+    if (hiddenYears.size > 0 || hiddenMonths.size > 0) {
+        rows = rows.filter(r => {
+            const parts = (r.date || '').split('/');
+            if (parts.length !== 3) return true;
+            const [mm, , yyyy] = parts;
+            return !hiddenYears.has(yyyy) && !hiddenMonths.has(mm);
+        });
+    }
+    if (!rows.length) { setStatus('No rows to export. Please adjust your filter.', true); return; }
+    const label   = activeTab === 'oer' ? 'OER' : activeTab === 'all' ? 'All Activities' : 'Teachers Creation';
+    const prefix  = activeTab === 'oer' ? 'OER' : activeTab === 'all' ? 'ALL' : 'TC';
+    const ids     = [...new Set(rows.map(r => r.courseId))].join('-');
+    exportCSV(rows, `${prefix}_${ids}.csv`, label);
+});
+
+window.addEventListener('strategies-updated', async () => {
+    await loadStrategies();
+    if (tableData.length > 0) {
+        tableData.forEach(r => { r.strategy = getStrategy(r.activityName); });
+        renderTable(currentRows);
+    }
+});
+
+window.addEventListener('subjects-updated', async () => {
+    await loadSubjects();
+    if (tableData.length > 0) {
+        tableData.forEach(r => { r.subject = getSubject(r.courseName || ''); });
+        renderActiveTab();
+    }
+});
+
+document.addEventListener('DOMContentLoaded', async () => {
+    await Promise.all([loadStrategies(), loadSubjects()]);
+
+    // Activity type filter icon
+    const typeFilterIcon = document.getElementById('typeFilterIcon');
+    if (typeFilterIcon) {
+        typeFilterIcon.addEventListener('click', e => {
+            e.stopPropagation();
+            toggleFilterDropdown(typeFilterIcon);
+        });
+    }
+
+    // Date filter icon
+    const dateFilterIcon = document.getElementById('dateFilterIcon');
+    if (dateFilterIcon) {
+        dateFilterIcon.addEventListener('click', e => {
+            e.stopPropagation();
+            toggleDateFilterDropdown(dateFilterIcon);
+        });
+    }
+
+    // Header click sort
+    document.querySelectorAll('thead th[data-sort]').forEach(th => {
+        th.style.cursor = 'pointer';
+        th.title = 'Click to sort';
+        th.addEventListener('click', () => {
+            const col = th.dataset.sort;
+            if (sortCol === col) {
+                sortDir = sortDir === 'asc' ? 'desc' : 'asc';
+                if (sortDir === 'asc' && col === sortCol) {
+                    // third-click reset handled by toggling back to asc on second click
+                }
+            } else {
+                sortCol = col;
+                sortDir = 'asc';
+            }
+            renderActiveTab();
+        });
+    });
+});
+
+function showDuplicateModal(dupUrls) {
+    dupUrlList.innerHTML = '';
+    dupUrls.forEach(u => {
+        const li = document.createElement('li');
+        li.textContent = u;
+        dupUrlList.appendChild(li);
+    });
+    dupUrlModal.style.display = 'flex';
+    return new Promise(resolve => {
+        function cleanup() {
+            dupUrlModal.style.display = 'none';
+            dupUrlConfirmBtn.removeEventListener('click', onConfirm);
+            dupUrlCancelBtn.removeEventListener('click', onCancel);
+            dupUrlModal.removeEventListener('click', onBackdrop);
+        }
+        function onConfirm()   { cleanup(); resolve(true); }
+        function onCancel()    { cleanup(); resolve(false); }
+        function onBackdrop(e) { if (e.target === dupUrlModal) { cleanup(); resolve(false); } }
+        dupUrlConfirmBtn.addEventListener('click', onConfirm);
+        dupUrlCancelBtn.addEventListener('click', onCancel);
+        dupUrlModal.addEventListener('click', onBackdrop);
+    });
+}
+
+fetchBtn.addEventListener('click', async () => {
+    const urlsRaw       = document.getElementById('courseUrl').value;
+    const token         = document.getElementById('wsToken').value.trim();
+    const sessionCookie = document.getElementById('sessionKey').value.trim();
+
+    let urls = urlsRaw.split('\n').map(u => u.trim()).filter(Boolean);
+    if (!urls.length) { setStatus('Please enter at least one course URL.', true); return; }
+    if (!token)       { setStatus('Web service token is required.', true); return; }
+
+    // Detect duplicate URLs (trim + strip trailing slash for comparison)
+    const normUrl   = u => u.replace(/\/+$/, '');
+    const seenUrls  = new Map();
+    const dupUrls   = [];
+    const dedupedUrls = [];
+    for (const u of urls) {
+        const key = normUrl(u);
+        if (seenUrls.has(key)) { dupUrls.push(u); }
+        else { seenUrls.set(key, u); dedupedUrls.push(u); }
+    }
+    if (dupUrls.length) {
+        const ok = await showDuplicateModal(dupUrls);
+        if (!ok) return;
+        document.getElementById('courseUrl').value = dedupedUrls.join('\n');
+        urls = dedupedUrls;
+    }
+
+    // Validate all URLs before fetching any
+    const courseEntries = [];
+    for (const urlRaw of urls) {
+        try {
+            const parsed    = new URL(urlRaw);
+            const courseIdx = parsed.pathname.indexOf('/course/');
+            const basePath  = courseIdx > 0 ? parsed.pathname.slice(0, courseIdx) : '';
+            const baseUrl   = parsed.origin + basePath;
+            const courseId  = parseInt(parsed.searchParams.get('id'), 10);
+            if (isNaN(courseId) || courseId <= 0) throw new Error('no id');
+            courseEntries.push({ baseUrl, courseId });
+        } catch {
+            setStatus(`Invalid URL: ${urlRaw}`, true);
+            return;
+        }
+    }
+
+    // Reset
+    tableData      = [];
+    allData        = [];
+    teacherData    = [];
+    oerData        = [];
+    courseRegistry = [];
+    document.getElementById('countAll').textContent      = '0';
+    document.getElementById('countTeachers').textContent = '0';
+    document.getElementById('countOer').textContent      = '0';
+    sortCol     = null;
+    sortDir     = 'asc';
+    closeFilterDropdown();
+    closeDateFilterDropdown();
+    document.getElementById('corsNotice').style.display = 'none';
+    tbody.innerHTML = `<tr><td colspan="8" class="empty-state-cell">Loading…</td></tr>`;
+    rowCountEl.textContent = 'loading…';
+    setDownloadDisabled(downloadBtn, true);
+    setDownloadDisabled(heatmapBtn, true);
+    document.getElementById('courseNameSection').style.display = 'none';
+    setStatus(`Processing ${courseEntries.length} course(s)…`);
+
+    await Promise.all([loadStrategies(), loadSubjects()]);
+    setBtnLoading('Fetching course structure…');
+
+    try {
+        const N = courseEntries.length;
+
+        // Phase 1 — fetch all course metadata in parallel (fast API calls)
+        const metaList = await Promise.all(courseEntries.map(async entry => {
+            const [courseName, sections, fallbackUser] = await Promise.all([
+                fetchCourseName(entry.baseUrl, token, entry.courseId),
+                apiFetch(entry.baseUrl, token, 'core_course_get_contents', {courseid: String(entry.courseId)}),
+                fetchFirstAccessor(entry.baseUrl, token, entry.courseId),
+            ]);
+            return { ...entry, courseName, sections, fallbackUser };
+        }));
+
+        courseRegistry = metaList.map((m, i) => ({
+            courseGroupIndex: i,
+            courseId:         m.courseId,
+            courseName:       m.courseName || `Course ${m.courseId}`,
+            courseBaseUrl:    m.baseUrl,
+        }));
+        const modCounts  = metaList.map(m => m.sections.flatMap(s => s.modules || []).length);
+        const totalMods  = modCounts.reduce((a, b) => a + b, 0);
+        let   globalDone = 0;
+
+        // Phase 2 — fetch logs sequentially with smooth global progress bar
+        const allRows = [];
+        for (let i = 0; i < N; i++) {
+            const { baseUrl, courseId, courseName, sections, fallbackUser } = metaList[i];
+            const subject      = getSubject(courseName || '');
+            const courseModCnt = modCounts[i];
+
+            setStatus(`Course ${i + 1} / ${N} — fetching logs for "${courseName || courseId}"…`);
+            const rows = await buildRows(
+                sections, baseUrl, courseId, sessionCookie, fallbackUser,
+                courseName, subject, i,
+                (frac, label) => {
+                    const globalFrac = totalMods > 0
+                        ? (globalDone + frac * modCounts[i]) / totalMods
+                        : (i + frac) / N;
+                    setBtnLoading(`Course ${i + 1}/${N}: ${label}`, globalFrac);
+                }
+            );
+            globalDone += courseModCnt;
+            allRows.push(...rows);
+        }
+
+        tableData   = allRows.filter(r => !isExcludedRow(r));
+        deduplicateActivityNames(tableData);
+        allData     = [...tableData];
+        teacherData = tableData.filter(r => r.modname !== 'url');
+        oerData     = tableData.filter(r => r.modname === 'url');
+
+        // Default type filter: hide "Text and Media Area" if present in data
+        hiddenTypes  = new Set();
+        hiddenYears  = new Set();
+        hiddenMonths = new Set();
+        if (new Set(tableData.map(r => r.activityType)).has('Text and Media Area')) {
+            hiddenTypes.add('Text and Media Area');
+        }
+
+        // Snapshot for Reset Table
+        snapshotAllData      = [...allData];
+        snapshotTeacherData  = [...teacherData];
+        snapshotOerData      = [...oerData];
+        snapshotHiddenTypes  = new Set(hiddenTypes);
+        snapshotHiddenYears  = new Set(hiddenYears);
+        snapshotHiddenMonths = new Set(hiddenMonths);
+
+        if (N === 1 && allRows.length > 0) {
+            const nameEl = document.getElementById('courseNameDisplay');
+            nameEl.textContent = allRows[0].courseName || `Course ${courseEntries[0].courseId}`;
+            nameEl.href = `${courseEntries[0].baseUrl}/course/view.php?id=${courseEntries[0].courseId}`;
+            document.getElementById('courseNameSection').style.display = 'block';
+        }
+
+        const logCount = tableData.filter(r => r.fromLog).length;
+        setStatus(`Done. ${tableData.length} module(s) across ${N} course(s) — ${logCount} with confirmed log date.`);
+        setBtnSuccess('✓ Done');
+        setDownloadDisabled(heatmapBtn, courseRegistry.length === 0);
+
+        updateTabCounts();
+        activeTab = 'all';
+        renderActiveTab();
+
+    } catch (err) {
+        console.error(err);
+        let msg = err.message;
+        if (msg.includes('Invalid token') || msg.includes('Access control')) msg = 'Invalid token or insufficient permissions.';
+        else if (msg.includes('Course not found')) msg = 'Course not found — check the course ID.';
+        setStatus(msg, true);
+        setBtnError('✗ Failed');
+        tbody.innerHTML = `<tr><td colspan="8" class="empty-state-cell" style="color:#ef4444">${escapeHtml(msg)}</td></tr>`;
+    }
+});
+
+]]>
+</file>
+<file name="CLAUDE.md">
+<![CDATA[
+# Moodle Activity Report — CLAUDE.md
+
+## Role
+
+Senior Vanilla JS / Browser-App Engineer. ES2022, no new frameworks or npm packages. Production standards: no dead code, no speculative abstractions, minimal comments.
+
+---
+
+## Stack
+
+- **Alpine.js v3** (CDN `@3.x.x`) — root component on `<body x-data="credentialsApp()">`
+- **Tailwind CSS v4.2.x** — compiled via `@tailwindcss/cli` from `src/input.css` → `output.css`
+- **Node.js CORS proxy** — `server.js` (preferred); `server.py` fallback (no CSS/JS serving)
+
+---
+
+## IMPORTANT: npm Commands
+
+```
+npm start          # node server.js — CORS proxy on localhost:8080
+npm run build      # compile src/input.css → output.css (minified) — run after ANY new Tailwind class
+npm run watch      # same, with file watcher
+```
+
+---
+
+## Architecture
+
+```
+Browser (index.html + app.js)
+    │  fetch() — routed through proxy when isLocal() === true
+    ▼
+Local CORS Proxy (server.js) → port 8080
+    │
+    ▼
+Remote Moodle Instance
+  ├─ /webservice/rest/server.php        ← JSON Web Services (token auth)
+  ├─ /course/view.php?id={id}           ← sesskey extraction (cookie auth)
+  └─ /report/log/index.php?...&download=json  ← JSON log (cookie auth)
+```
+
+**IMPORTANT:** All fetching and parsing happens entirely in the browser. `server.js` is a dumb TCP tunnel — it forwards requests and streams responses unchanged.
+
+**Proxy routing (never bypass):**
+- Web service calls → `apiProxyUrl(url)` — no cookie
+- Log/page calls → `htmlProxyUrl(url, cookie)` — cookie forwarded
+- `isLocal()` returns `true` when origin is `localhost` or `file://`
+
+**IMPORTANT — subdirectory installs** (e.g. `/cle`): base URL extracted via `indexOf('/course/')` — **never `new URL(...).origin`**, which strips the subpath.
+
+---
+
+## File Map
+
+| File | Purpose |
+|---|---|
+| `index.html` | Full UI — Alpine app shell, modals, progress bar, tab bar, results table |
+| `app.js` | All client logic — API calls, sorting, rendering, CSV export |
+| `server.js` | Node CORS proxy — **preferred**; serves all static files |
+| `server.py` | Python CORS proxy — fallback; **does not** serve `output.css` or `app.js` |
+| `src/input.css` | Tailwind v4 entry: `@import "tailwindcss"` only |
+| `output.css` | Compiled Tailwind CSS — **must be rebuilt** after adding any utility class |
+| `strategies.json` | Keyword→strategy map — read fresh on every `/strategies` request |
+
+---
+
+## Data Flow
+
+1. `fetchBtn` click → extract `baseUrl` via `indexOf('/course/')` (preserves subdirectory path)
+2. Three parallel WS calls: `core_course_get_courses`, `core_course_get_contents`, `core_enrol_get_enrolled_users`
+3. `fetchSesskey()` scrapes `/"sesskey":"([a-zA-Z0-9]+)"/` from `/course/view.php?id={id}`
+4. `scrapeLogPage()` per module (BATCH=6 concurrent):
+   - **Step 1** — `modaction=c` fetch → `eventname === 'Course module created'` found → **VERIFIED**
+   - **Step 2** — broad fetch (no modaction), only if Step 1 empty → oldest event → **INFERRED**
+   - **Step 3** — `mod.added` fallback when both empty → **ESTIMATED**
+5. Log endpoint returns `[[{...}]]` (double-wrapped) — unwrap: `Array.isArray(parsed[0]) ? parsed[0] : parsed`
+6. `parseMoodleJsonTs()` converts `DD/MM/YY, HH:MM:SS` → Unix seconds with full precision (needed for INFERRED sort)
+
+**Tab split:** `teacherData` = `modname !== 'url'`; `oerData` = `modname === 'url'`; `allData` = all rows. ALL tab is default.
+
+**Course separator rows** — shown in unsorted view only (`sortCol === null`); always rendered for every course in `courseRegistry`, even if the course has zero rows after filtering or zero modules — in that case a "No data." empty-state row (`.course-empty-cell`) follows the separator. Each separator carries a `.course-sep-heatmap-btn` (`book-open-check.svg`) that opens the heatmap modal pre-selected to that course.
+
+**Date Confidence:**
+
+| Priority | `dateSource` | Badge | Condition |
+|---|---|---|---|
+| 1 | `VERIFIED` | LOG (green) | `Course module created` event found in Step 1 |
+| 2 | `INFERRED` | FIRST (orange) | Oldest event from Step 2 broad fetch |
+| 3 | `ESTIMATED` | EST (yellow) | Both fetches empty; `mod.added` used |
+
+---
+
+## Column Filters
+
+- **Type filter** — `hiddenTypes` Set; `toggleFilterDropdown`; icon `#typeFilterIcon`
+- **Date filter** — `hiddenYears` + `hiddenMonths` Sets; `toggleDateFilterDropdown`; icon `#dateFilterIcon`
+- Filter order in `applyAndRender()`: sort → type → date (AND logic)
+- Both cleared on every new fetch and by `resetTable()`; CSV export mirrors same logic
+- Dropdown scans `getActiveRows()` so already-hidden values stay accessible
+
+---
+
+## Activity Heatmap Modal
+
+- **Trigger** — `#heatmapBtn` in the toolbar (calendar icon); disabled until a fetch succeeds; enabled via `setDownloadDisabled(heatmapBtn, false)` after fetch; also triggered by clicking the `book-open-check.svg` icon on any course separator row (auto-selects that course)
+- **Data source** — course list built from `tableData` (all courses, including those with 0 filtered rows); row data per course comes from `currentRows` (respects active tab + type + date filters)
+- **State variables** — `heatmapCourses[]` (`{courseName, rows}`), `heatmapCourseIdx` (current index)
+- **Functions** — `openHeatmapModal(targetGroupIndex = null)`, `closeHeatmapModal()`, `renderHeatmapForCourse(idx)`, `buildHeatmapYearSection(year, dayCountMap)`, `updateHeatmapNav()`
+- **Constant** — `MONTH_SHORT` (3-letter month abbreviations, used for grid month labels)
+- **Grid layout** — GitHub-style: 7 rows (Mon → Sun), week columns left→right, `grid-auto-flow: column`; each cell is 13 × 13 px with 2 px gap; cells outside the year are `.hm-empty` (transparent)
+- **Day-count map** — keyed `'YYYY-MM-DD'` from `row.rawTs * 1000`; 5 intensity levels (0 = `.hm-level-0` … 11+ = `.hm-level-4`); future dates → `.hm-future`; tooltip: `"N module(s) on D Month YYYY"`
+- **Year sections** — one per calendar year with data, newest on top; month labels below the grid, widths computed as `weekSpan × 15 px`
+- **Navigation** — dropdown `#heatmapCourseSelect` lists all courses; `#heatmapPrevBtn` / `#heatmapNextBtn` at bottom show adjacent course names (hidden when at boundary)
+- **Dismiss** — close button (`#heatmapCloseBtn`) or click on backdrop
+
+---
+
+## Icons
+
+All icons: `src/icons/*.svg` (Lucide-style, `stroke="currentColor"`). Always use `<img class="icon-img" alt="">`.
+
+**IMPORTANT: Never use inline SVGs or emojis — always reference files from `src/icons/`.**
+
+| File | Usage |
+|---|---|
+| `settings.svg` | Credentials button + modal header |
+| `logs.svg` | Manage Strategies button + modal header |
+| `notebook.svg` | Manage Subjects button + modal header |
+| `moon.svg` / `sun.svg` | Dark/light mode toggle |
+| `download.svg` | CSV Download button |
+| `list-reset.svg` | Reset to Default View button |
+| `calendars.svg` | Activity Heatmap button |
+| `external-link.svg` | Logs column header + row log link |
+| `x.svg` | All modal close buttons |
+| `chevron-left.svg` | Heatmap prev-course nav button |
+| `chevron-right.svg` | Heatmap next-course nav button |
+| `book-open-check.svg` | Course separator row heatmap trigger button |
+| `eye.svg` | Reveal toggle — show masked credential field |
+| `eye-off.svg` | Reveal toggle — hide revealed credential field |
+
+Tinting: `.icon-img` CSS filter in `index.html <style>` block (dark default) + `body.light-mode .icon-img` override.
+Muted icons: add `style="opacity:0.55"` inline (single-property — acceptable).
+
+---
+
+## NEVER DO
+
+- **NEVER** use `new URL(...).origin` for base URL extraction — strips subdirectory path
+- **NEVER** use inline SVGs or emojis for icons
+- **NEVER** write multi-property inline styles — define a named class in `src/input.css`
+- **NEVER** set Tailwind utility classes dynamically via JS (`className` / `classList`) — JIT scanner won't include them; use custom CSS modifier classes (e.g. `.tab-btn--active`) defined in the stylesheet
+- **NEVER** use Alpine `$parent` to mutate ancestor state — use `$dispatch('event')` + `@event.window="..."` on the target element
+- **NEVER** hardcode credentials in committed files
+- **NEVER** bind `server.js` to `0.0.0.0` — must stay `127.0.0.1`
+- **NEVER** add npm packages beyond existing devDependencies
+- **NEVER** use `server.py` as the primary dev server — it does not serve `output.css`
+- **NEVER** `throw` from a log/scrape helper — return `null` and let `buildRows` handle it
+
+---
+
+## Coding Standards
+
+**Naming:** `camelCase` functions, `SCREAMING_SNAKE` constants, DOM cache vars match element ID.
+
+**Error handling:**
+- All `fetch` calls: `try/catch`, return `null` on failure — callers check for `null`
+- Long fetches: `AbortController` + `setTimeout` timeout with `clearTimeout` in `finally`
+- Fatal errors → `setStatus(msg, true)` — never `console.error` only
+
+**IMPORTANT — CSS rules:**
+- Single-property inline styles are fine: `style="display:none"`, `style="color:#ef4444"`
+- Two or more CSS properties → define a named class in `src/input.css`; run `npm run build`
+- Theme-aware runtime values → CSS modifier class with `body.light-mode` variant (e.g. `.chip--light`)
+- `[x-cloak] { display: none }` must exist in the stylesheet
+
+---
+
+## Verification
+
+After any change, confirm:
+1. `npm run build` completes without errors
+2. `grep -P 'style="[^"]*;[^"]*;' index.html app.js` returns zero results (no multi-prop inline styles)
+3. `npm start` → open `http://localhost:8080` → trigger a report fetch
+4. Table renders; badges show correct VERIFIED / INFERRED / ESTIMATED tiers
+5. Dark/light toggle, CSV download, type filter, and date filter all function correctly
+6. No CORS errors in browser DevTools Network tab
+
+---
+
+## Gotchas
+
+- **Session cookie expires on Moodle logout** — reports silently return no log data; user must re-paste `MoodleSession`
+- **`sesskey` is per-session CSRF token** — if `/course/view.php` fetch fails, all log downloads return empty
+- **`output.css` missing or stale** → page renders completely unstyled
+- **`parseMoodleJsonTs()` full precision** — required for INFERRED oldest-event selection; do not simplify to date-only
+
+---
+
+## Context Triggers
+
+**Proceed without asking:**
+- Fix is localized to one function with unambiguous intent
+- Adding/editing a `MODULE_FULLNAMES` entry
+- Changing BATCH size, timeouts, or delay values
+- CSS-only changes that don't add new Tailwind classes
+
+**Ask first:**
+- Changing tab split logic (`modname !== 'url'`) — affects both tabs and CSV filenames
+- Changing row object shape — `renderTable`, `exportCSV`, `applySort` all depend on it
+- Adding a new credential field — touches `index.html` inputs, `app.js` fetchBtn handler, Alpine component
+- Any change to `server.js` / `server.py` request routing
+
+---
+
+## Recipes
+
+**New activity type label:** Edit `MODULE_FULLNAMES` in `app.js` (~line 38). Key = Moodle `modname` string.
+
+**New sort mode:** Button in `index.html` → click listener sets `sortMode` + calls `renderActiveTab()` → add case in `applySort()` + `updateSortUI()`.
+
+**Change CSV columns:** Edit `hdr` array and `body` row mapping inside `exportCSV()`.
+
+**New icon:** Add SVG to `src/icons/`, use `<img class="icon-img" alt="">`, add row to Icons table above.
+
+]]>
+</file>
+<file name="index.html">
+<![CDATA[
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+    <meta http-equiv="Content-Security-Policy" content="frame-ancestors 'none'">
+    <title>Moodle Activity Report</title>
+    <link rel="stylesheet" href="output.css">
+    <style>
+
+    </style>
+</head>
+<body x-data="credentialsApp()">
+<!-- Flash prevention: runs synchronously before any element paints -->
+<script>try{if(localStorage.getItem('moodleTheme')==='light')document.body.classList.add('light-mode')}catch(_){}</script>
+
+<!-- ── Settings Backdrop + Modal ────────────────────────────────────────────── -->
+<div
+    class="modal-backdrop modal-overlay"
+    x-show="open"
+    x-cloak
+    x-transition:enter="transition-opacity ease-out duration-200"
+    x-transition:enter-start="opacity-0"
+    x-transition:enter-end="opacity-100"
+    x-transition:leave="transition-opacity ease-in duration-150"
+    x-transition:leave-start="opacity-100"
+    x-transition:leave-end="opacity-0"
+    @click.self="open = false"
+    @keydown.escape.window="open = false">
+
+    <div id="settingsModal" class="tech-card modal-card-sm"
+         @click.stop>
+
+        <!-- Modal header -->
+        <div class="modal-header">
+            <div class="modal-title-row">
+                <img src="src/icons/settings.svg" width="15" height="15" class="icon-img" alt="">
+                <span class="tech-title modal-title">Credentials</span>
+            </div>
+            <button @click="open = false" class="header-icon-btn modal-close-btn" title="Close">
+                <img src="src/icons/x.svg" width="13" height="13" class="icon-img" alt="">
+            </button>
+        </div>
+
+        <!-- Modal body -->
+        <div style="padding:20px">
+            <div style="margin-bottom:14px">
+                <label for="modalUrl" class="modal-label">
+                    Server URL
+                </label>
+                <input type="text" id="modalUrl" class="tech-input"
+                    x-model="modalUrl"
+                    placeholder="https://yourmoodle.edu"
+                    autocomplete="off" spellcheck="false">
+            </div>
+            <div style="margin-bottom:14px">
+                <label for="modalToken" class="modal-label">
+                    WS Token
+                </label>
+                <div class="input-reveal-wrap">
+                    <input :type="showToken ? 'text' : 'password'" id="modalToken" class="tech-input"
+                        x-model="modalToken"
+                        @input="onTokenInput()"
+                        placeholder="Web service token"
+                        style="padding-right:34px"
+                        autocomplete="off" spellcheck="false">
+                    <button type="button" class="reveal-toggle-btn"
+                        @click="showToken = !showToken"
+                        :title="showToken ? 'Hide token' : 'Show token'">
+                        <img :src="showToken ? 'src/icons/eye-off.svg' : 'src/icons/eye.svg'"
+                             width="14" height="14" class="icon-img" alt="">
+                    </button>
+                </div>
+                <!-- Live token status -->
+                <div class="modal-token-status">
+                    <span x-show="tokenStatus === 'checking'" x-cloak class="token-checking">
+                        <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"
+                             class="spin-icon">
+                            <path stroke-linecap="round" d="M12 2a10 10 0 0110 10"/>
+                        </svg>
+                        Checking…
+                    </span>
+                    <span x-show="tokenStatus === 'valid'"   x-cloak style="color:#34d399">✓ Token valid</span>
+                    <span x-show="tokenStatus === 'invalid'" x-cloak style="color:#f87171">✗ Invalid token</span>
+                    <span x-show="tokenStatus === 'failed'"  x-cloak style="color:rgba(148,163,184,.45)">Could not verify</span>
+                </div>
+            </div>
+            <div style="margin-bottom:8px">
+                <label for="modalCookie" class="modal-label">
+                    Session Cookie
+                </label>
+                <div class="input-reveal-wrap">
+                    <input :type="showCookie ? 'text' : 'password'" id="modalCookie" class="tech-input"
+                        x-model="modalCookie" placeholder="MoodleSession=abc123…"
+                        style="padding-right:34px"
+                        autocomplete="off" spellcheck="false">
+                    <button type="button" class="reveal-toggle-btn"
+                        @click="showCookie = !showCookie"
+                        :title="showCookie ? 'Hide cookie' : 'Show cookie'">
+                        <img :src="showCookie ? 'src/icons/eye-off.svg' : 'src/icons/eye.svg'"
+                             width="14" height="14" class="icon-img" alt="">
+                    </button>
+                </div>
+                <p class="field-hint">Session cookie cannot be verified automatically.</p>
+            </div>
+            <p class="creds-help-text">
+                <strong class="creds-help-strong">Chrome/Edge:</strong>
+                F12 → Application → Cookies → copy
+                <code class="code-chip">MoodleSession</code> value.<br>
+                <strong class="creds-help-strong">Firefox:</strong> F12 → Storage → Cookies.<br>
+                <span style="color:rgba(251,191,36,.75)">⚠ Must be logged in as admin. Session expires on logout.</span>
+            </p>
+            <div class="modal-footer-btns">
+                <button @click="saveCreds()" class="tech-btn" style="flex:1">Save</button>
+                <button @click="clearCreds()" class="tech-btn btn-muted">
+                    Clear Fields
+                </button>
+            </div>
+        </div>
+
+    </div>
+</div>
+
+<!-- ── Strategy Manager Backdrop + Modal ────────────────────────────────────── -->
+<div
+    class="modal-backdrop modal-overlay"
+    x-show="strategyOpen"
+    x-cloak
+    x-transition:enter="transition-opacity ease-out duration-200"
+    x-transition:enter-start="opacity-0"
+    x-transition:enter-end="opacity-100"
+    x-transition:leave="transition-opacity ease-in duration-150"
+    x-transition:leave-start="opacity-100"
+    x-transition:leave-end="opacity-0"
+    @click.self="strategyOpen = false"
+    @keydown.escape.window="strategyOpen = false"
+    @strategy-close.window="strategyOpen = false">
+
+    <div id="strategyModal" class="tech-card modal-card-lg" x-data="strategyApp()"
+         @click.stop>
+
+        <!-- Modal header -->
+        <div class="modal-header">
+            <div class="modal-title-row-lg">
+                <img src="src/icons/logs.svg" width="15" height="15" class="icon-img" alt="">
+                <span class="tech-title modal-title">Strategy Manager</span>
+                <span x-show="status === 'saving'" x-cloak class="modal-status-saving">saving…</span>
+                <span x-show="status === 'saved'"  x-cloak class="modal-status-saved">✓ saved</span>
+                <span x-show="status === 'error'"  x-cloak class="modal-status-error">save failed</span>
+            </div>
+            <button @click="$dispatch('strategy-close')" class="header-icon-btn modal-close-btn" title="Close">
+                <img src="src/icons/x.svg" width="13" height="13" class="icon-img" alt="">
+            </button>
+        </div>
+
+        <!-- Inline error -->
+        <div x-show="error" x-cloak class="modal-error-bar">
+            <span class="modal-error-text" x-text="error"></span>
+            <button @click="error = ''" class="modal-error-dismiss">×</button>
+        </div>
+
+        <!-- Add new strategy -->
+        <div class="modal-add-section">
+            <div class="modal-section-label">Add Strategy</div>
+            <div class="modal-add-row">
+                <input type="text" class="tech-input modal-add-input" x-model="newStrategyName"
+                    placeholder="Strategy name"
+                    @keydown.enter="addStrategy()">
+                <input type="text" class="tech-input modal-add-input" x-model="newStrategyKeyword"
+                    placeholder="First keyword (optional)"
+                    @keydown.enter="addStrategy()">
+                <button @click="addStrategy()" class="tech-btn btn-add">+ Add</button>
+            </div>
+        </div>
+
+        <!-- Strategies list — scrollable -->
+        <div class="modal-list">
+            <template x-for="strategy in strategies" :key="strategy.name">
+                <div class="modal-list-item">
+
+                    <!-- Name row -->
+                    <div class="list-item-header">
+                        <span class="item-name" x-text="strategy.name"></span>
+                        <template x-if="!strategy.isDefault">
+                            <button @click="deleteStrategy(strategy.name)" class="btn-remove">× Remove</button>
+                        </template>
+                        <template x-if="strategy.isDefault">
+                            <span class="badge-default">default</span>
+                        </template>
+                    </div>
+
+                    <!-- Keywords -->
+                    <div class="keywords-row">
+                        <template x-for="kw in strategy.keywords" :key="kw">
+                            <span class="keyword-chip">
+                                <span x-text="kw"></span>
+                                <button @click="removeKeyword(strategy.name, kw)" class="keyword-remove-btn">×</button>
+                            </span>
+                        </template>
+                        <input type="text"
+                            :value="keywordInputs[strategy.name] || ''"
+                            @input="keywordInputs[strategy.name] = $event.target.value"
+                            @keydown.enter="addKeyword(strategy.name)"
+                            placeholder="+ keyword"
+                            class="tech-input keyword-input">
+                        <button @click="addKeyword(strategy.name)" class="btn-add-keyword">Add</button>
+                    </div>
+
+                </div>
+            </template>
+        </div>
+
+    </div>
+</div>
+
+<!-- ── Subject Manager Backdrop + Modal ─────────────────────────────────────── -->
+<div
+    class="modal-backdrop modal-overlay"
+    x-show="subjectOpen"
+    x-cloak
+    x-transition:enter="transition-opacity ease-out duration-200"
+    x-transition:enter-start="opacity-0"
+    x-transition:enter-end="opacity-100"
+    x-transition:leave="transition-opacity ease-in duration-150"
+    x-transition:leave-start="opacity-100"
+    x-transition:leave-end="opacity-0"
+    @click.self="subjectOpen = false"
+    @keydown.escape.window="subjectOpen = false"
+    @subject-close.window="subjectOpen = false">
+
+    <div id="subjectModal" class="tech-card modal-card-lg" x-data="subjectApp()"
+         @click.stop>
+
+        <!-- Modal header -->
+        <div class="modal-header">
+            <div class="modal-title-row-lg">
+                <img src="src/icons/notebook.svg" width="15" height="15" class="icon-img" alt="">
+                <span class="tech-title modal-title">Subject Manager</span>
+                <span x-show="status === 'saving'" x-cloak class="modal-status-saving">saving…</span>
+                <span x-show="status === 'saved'"  x-cloak class="modal-status-saved">✓ saved</span>
+                <span x-show="status === 'error'"  x-cloak class="modal-status-error">save failed</span>
+            </div>
+            <button @click="$dispatch('subject-close')" class="header-icon-btn modal-close-btn" title="Close">
+                <img src="src/icons/x.svg" width="13" height="13" class="icon-img" alt="">
+            </button>
+        </div>
+
+        <!-- Inline error -->
+        <div x-show="error" x-cloak class="modal-error-bar">
+            <span class="modal-error-text" x-text="error"></span>
+            <button @click="error = ''" class="modal-error-dismiss">×</button>
+        </div>
+
+        <!-- Add new subject -->
+        <div class="modal-add-section">
+            <div class="modal-section-label">Add Subject</div>
+            <div class="modal-add-row">
+                <input type="text" class="tech-input modal-add-input" x-model="newSubjectName"
+                    placeholder="Subject name"
+                    @keydown.enter="addSubject()">
+                <input type="text" class="tech-input modal-add-input" x-model="newSubjectKeyword"
+                    placeholder="First keyword (optional)"
+                    @keydown.enter="addSubject()">
+                <button @click="addSubject()" class="tech-btn btn-add">+ Add</button>
+            </div>
+        </div>
+
+        <!-- Subjects list — scrollable -->
+        <div class="modal-list">
+            <template x-for="subject in subjects" :key="subject.name">
+                <div class="modal-list-item">
+
+                    <!-- Name row -->
+                    <div class="list-item-header">
+                        <span class="item-name" x-text="subject.name"></span>
+                        <template x-if="!subject.isDefault">
+                            <button @click="deleteSubject(subject.name)" class="btn-remove">× Remove</button>
+                        </template>
+                        <template x-if="subject.isDefault">
+                            <span class="badge-default">default</span>
+                        </template>
+                    </div>
+
+                    <!-- Keywords -->
+                    <div class="keywords-row">
+                        <template x-for="kw in subject.keywords" :key="kw">
+                            <span class="keyword-chip">
+                                <span x-text="kw"></span>
+                                <button @click="removeKeyword(subject.name, kw)" class="keyword-remove-btn">×</button>
+                            </span>
+                        </template>
+                        <input type="text"
+                            :value="keywordInputs[subject.name] || ''"
+                            @input="keywordInputs[subject.name] = $event.target.value"
+                            @keydown.enter="addKeyword(subject.name)"
+                            placeholder="+ keyword"
+                            class="tech-input keyword-input">
+                        <button @click="addKeyword(subject.name)" class="btn-add-keyword">Add</button>
+                    </div>
+
+                </div>
+            </template>
+        </div>
+
+    </div>
+</div>
+
+<!-- ── Heatmap day tooltip ───────────────────────────────────────────────────── -->
+<div id="hmTooltip" class="hm-tooltip" style="display:none">
+    <div class="hm-tooltip-header"></div>
+    <ul class="hm-tooltip-list"></ul>
+</div>
+
+<!-- ── Duplicate URL Confirmation Modal ──────────────────────────────────────── -->
+<div id="dupUrlModal" class="modal-backdrop modal-overlay" style="display:none">
+    <div class="tech-card modal-card-sm">
+        <div class="modal-header">
+            <div class="modal-title-row">
+                <span class="modal-title">Duplicate Course URLs Detected</span>
+            </div>
+        </div>
+        <div style="padding:20px">
+            <ul id="dupUrlList" class="dup-modal-list"></ul>
+            <p class="dup-modal-body" style="margin-bottom:0">Only the first entry will be kept. Continue?</p>
+        </div>
+        <div class="dup-modal-footer">
+            <div class="modal-footer-btns">
+                <button id="dupUrlCancelBtn" class="tech-btn btn-muted">Cancel</button>
+                <button id="dupUrlConfirmBtn" class="tech-btn">Confirm</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- ── Activity Heatmap Modal ───────────────────────────────────────────────── -->
+<div id="heatmapModal" class="modal-backdrop" style="display:none">
+    <div class="tech-card hm-modal-card">
+        <div class="modal-header">
+            <div class="modal-title-row">
+                <img src="src/icons/calendars.svg" width="16" height="16" class="icon-img" alt="">
+                <span class="modal-title">Activity Heatmap</span>
+            </div>
+            <button id="heatmapCloseBtn" class="header-icon-btn modal-close-btn" title="Close">
+                <img src="src/icons/x.svg" width="13" height="13" class="icon-img" alt="">
+            </button>
+        </div>
+        <div class="hm-selector-bar">
+            <select id="heatmapCourseSelect" class="tech-input hm-select"></select>
+        </div>
+        <div id="heatmapContent" class="hm-content"></div>
+        <div class="hm-nav">
+            <button id="heatmapPrevBtn" class="tech-btn hm-nav-btn" style="visibility:hidden">← Prev</button>
+            <button id="heatmapNextBtn" class="tech-btn hm-nav-btn" style="visibility:hidden">Next →</button>
+        </div>
+    </div>
+</div>
+
+<!-- ── Header ────────────────────────────────────────────────────────────────── -->
+<header class="app-header">
+    <div class="header-inner">
+
+        <!-- Logo + title -->
+        <div class="header-brand">
+            <div class="header-logo">
+                <svg width="16" height="16" fill="none" stroke="#a78bfa" stroke-width="2" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M9 17v-2m3 2v-4m3 4v-6M5 17h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z"/>
+                </svg>
+            </div>
+            <div>
+                <div class="tech-title header-title-text">Moodle Activity Report</div>
+                <div class="header-subtitle">Course module creation log &bull; Dates in MM/DD/YYYY</div>
+            </div>
+        </div>
+
+        <!-- Right: theme toggle + settings dropdown -->
+        <div class="header-actions">
+
+            <!-- Theme toggle button -->
+            <button @click="toggleTheme()"
+                class="header-icon-btn"
+                :title="darkMode ? 'Switch to light mode' : 'Switch to dark mode'">
+                <img x-show="darkMode" src="src/icons/sun.svg" width="16" height="16" class="icon-img" alt="">
+                <img x-show="!darkMode" x-cloak src="src/icons/moon.svg" width="16" height="16" class="icon-img" alt="">
+            </button>
+
+            <!-- Settings dropdown -->
+            <div class="settings-dropdown-wrap"
+                 @mouseenter="clearTimeout(settingsHideTimer); settingsMenuOpen = true"
+                 @mouseleave="settingsHideTimer = setTimeout(() => settingsMenuOpen = false, 150)">
+
+                <button class="header-icon-btn" title="Settings">
+                    <img src="src/icons/settings.svg" width="16" height="16" class="icon-img" alt="">
+                </button>
+                <span x-show="hasCreds" x-cloak class="creds-indicator"></span>
+
+                <div class="settings-dropdown" x-show="settingsMenuOpen" x-cloak>
+                    <button @click="open = true; settingsMenuOpen = false" class="settings-dropdown-item">
+                        <img src="src/icons/settings.svg" width="14" height="14" class="icon-img" alt="">
+                        Credentials
+                    </button>
+                    <button @click="subjectOpen = true; settingsMenuOpen = false" class="settings-dropdown-item">
+                        <img src="src/icons/notebook.svg" width="14" height="14" class="icon-img" alt="">
+                        Manage Subject
+                    </button>
+                    <button @click="strategyOpen = true; settingsMenuOpen = false" class="settings-dropdown-item">
+                        <img src="src/icons/logs.svg" width="14" height="14" class="icon-img" alt="">
+                        Manage Strategies
+                    </button>
+                </div>
+            </div>
+
+        </div>
+    </div>
+</header>
+
+<!-- ── Main ──────────────────────────────────────────────────────────────────── -->
+<main class="app-main">
+
+    <!-- Config card -->
+    <div class="tech-card config-card">
+
+        <!-- Hidden inputs — read by app.js, populated from localStorage on load -->
+        <input type="hidden" id="wsToken">
+        <input type="hidden" id="sessionKey">
+
+        <div>
+            <label for="courseUrl" class="modal-label">
+                Course URL
+            </label>
+            <textarea id="courseUrl" rows="3" class="tech-input" style="font-family:monospace"
+                placeholder="https://yourmoodle.edu/course/view.php?id=2&#10;One URL per line for multiple courses"></textarea>
+            <button id="fetchBtn" class="tech-btn btn-full">
+                <div id="fetchProgress" class="fetch-progress-fill"></div>
+                <span id="fetchBtnText">Generate</span>
+            </button>
+        </div>
+
+        <!-- Status message -->
+        <div id="statusMessage" class="status-msg">
+            Enter course URL and click Generate Report.
+        </div>
+
+
+    </div>
+
+    <!-- CORS notice -->
+    <div id="corsNotice" class="cors-notice" style="display:none">
+        <p class="cors-title">⚠ Browser blocked the log page request (CORS)</p>
+        <p class="cors-text">Cross-origin restrictions prevent fetching log pages directly. Options:</p>
+        <ul class="cors-text cors-list">
+            <li>Upload this file to your Moodle server and open it from there</li>
+            <li>Use a browser extension like <strong>CORS Unblock</strong> (testing only)</li>
+        </ul>
+    </div>
+
+    <!-- Results card -->
+    <div class="tech-card results-card">
+
+        <!-- Course name banner -->
+        <div id="courseNameSection" class="course-banner" style="display:none">
+            <div class="course-banner-label">Course</div>
+            <a id="courseNameDisplay" href="#" target="_blank" rel="noopener"
+               class="course-name-link"></a>
+        </div>
+
+        <!-- Tab bar + toolbar -->
+        <div class="tab-bar">
+
+            <!-- Tabs -->
+            <div style="display:flex">
+                <button id="tabAll" class="tab-btn tab-btn--active">
+                    All
+                    <span id="countAll" class="tab-count tab-count--active">0</span>
+                </button>
+                <button id="tabTeachers" class="tab-btn">
+                    Teachers Creation
+                    <span id="countTeachers" class="tab-count">0</span>
+                </button>
+                <button id="tabOer" class="tab-btn">
+                    OER
+                    <span id="countOer" class="tab-count">0</span>
+                </button>
+                <button id="resetBtn" class="tech-btn btn-icon-only tab-btn-reset" title="Reset to default view">
+                    <img src="src/icons/list-reset.svg" width="13" height="13" class="icon-img" alt="">
+                </button>
+            </div>
+
+            <!-- Toolbar -->
+            <div class="toolbar">
+
+                <!-- Download -->
+                <button id="downloadBtn" class="tech-btn btn-icon-only" title="Download CSV" disabled>
+                    <img src="src/icons/download.svg" width="13" height="13" class="icon-img" alt="">
+                </button>
+
+                <!-- Activity Heatmap -->
+                <button id="heatmapBtn" class="tech-btn btn-icon-only" title="Activity Heatmap" disabled>
+                    <img src="src/icons/calendars.svg" width="13" height="13" class="icon-img" alt="">
+                </button>
+
+                <!-- Row count -->
+                <span id="rowCount" class="row-count-badge">0 entries</span>
+
+            </div>
+        </div>
+
+        <!-- Table -->
+        <div class="table-scroll-wrap">
+            <table class="report-table">
+                <thead>
+                    <tr class="table-head-row">
+                        <th class="th-cell-nowrap">#</th>
+                        <th data-sort="rawTs" class="th-cell-nowrap">Date<span class="sort-ind">⇅</span><span id="dateFilterIcon" class="type-filter-icon" title="Filter by date"><svg width="11" height="11" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg></span></th>
+                        <th data-sort="fullname" class="th-cell">User<span class="sort-ind">⇅</span></th>
+                        <th data-sort="activityType" class="th-cell-nowrap">Activity Type<span class="sort-ind">⇅</span><span id="typeFilterIcon" class="type-filter-icon" title="Filter by activity type"><svg width="11" height="11" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M3 6h18M6 12h12M10 18h4"/></svg></span></th>
+                        <th data-sort="activityName" class="th-cell">Activity Name<span class="sort-ind">⇅</span></th>
+                        <th data-sort="subject" class="th-cell-nowrap">Subject<span class="sort-ind">⇅</span></th>
+                        <th id="thStrategy" class="th-cell-nowrap th-strategy">Strategy</th>
+                        <th class="th-cell-center" title="Logs">
+                            <img src="src/icons/external-link.svg" width="13" height="13" class="icon-img th-icon-muted" alt="">
+                        </th>
+                    </tr>
+                </thead>
+                <tbody id="reportTbody">
+                    <tr>
+                        <td colspan="8" class="empty-state-cell">
+                            No data yet. Enter course URL(s) and click Generate Report.
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+
+        <!-- Legend -->
+        <div class="app-footer">
+            <span>Date &amp; creator parsed from Moodle log pages</span>
+            <span class="legend-item">
+                <span class="legend-dot legend-dot-verified"></span>
+                VERIFIED = Course module created event
+            </span>
+            <span class="legend-item">
+                <span class="legend-dot legend-dot-inferred"></span>
+                INFERRED = oldest log event
+            </span>
+            <span class="legend-item">
+                <span class="legend-dot legend-dot-estimated"></span>
+                EST = fallback (mod.added / timecreated)
+            </span>
+        </div>
+
+    </div>
+
+    <!-- Scroll-more fade indicator (fixed overlay — must be outside overflow:clip card) -->
+    <div id="scrollFadeBottom" class="scroll-fade-bottom" style="pointer-events:none"></div>
+
+    <!-- Sticky current-course banner (fixed overlay — must be outside overflow:clip card) -->
+    <div id="stickyCourseBanner" class="sticky-course-banner" style="display:none">
+        <div class="course-sep-inner">
+            <button id="stickyHeatmapBtn" class="tech-btn btn-icon-only course-sep-heatmap-btn" title="View activity heatmap">
+                <img src="src/icons/book-open-check.svg" width="13" height="13" class="icon-img" alt="">
+            </button>
+            <a id="stickyCourseBannerLink" class="course-sep-link" href="#" target="_blank" rel="noopener"></a>
+        </div>
+    </div>
+
+</main>
+
+<!-- ── Alpine component ───────────────────────────────────────────────────────── -->
+<script>
+function credentialsApp() {
+    return {
+        open:             false,
+        strategyOpen:     false,
+        subjectOpen:      false,
+        settingsMenuOpen: false,
+        settingsHideTimer: null,
+        modalToken:   '',
+        modalCookie:  '',
+        modalUrl:     '',
+        showToken:    false,
+        showCookie:   false,
+        hasCreds:     false,
+        darkMode:     true,
+        LS_KEY:       'moodleCredentials',
+        tokenStatus:  '',   // '' | 'checking' | 'valid' | 'invalid' | 'failed'
+        tokenTimer:   null,
+
+        init() {
+            // Theme
+            this.darkMode = localStorage.getItem('moodleTheme') !== 'light';
+            document.body.classList.toggle('light-mode', !this.darkMode);
+
+            // Credentials
+            const creds = this._load();
+            if (creds) {
+                this.modalToken  = creds.token  || '';
+                this.modalCookie = creds.cookie || '';
+                this.modalUrl    = creds.url    || '';
+                this._apply(creds.token, creds.cookie);
+                if (creds.url) this._applyUrl(creds.url);
+            }
+            this.hasCreds = !!(creds && (creds.token || creds.cookie));
+            if (!this.hasCreds) {
+                document.getElementById('statusMessage').textContent =
+                    'Click ⚙ to set your WS Token & Session Cookie, then enter the course URL and click Generate Report.';
+            }
+
+            // Pre-fill course URL value from saved server URL, or use fallback
+            const urlInput = document.getElementById('courseUrl');
+            if (urlInput && !urlInput.value) {
+                const savedUrl = creds?.url?.replace(/\/$/, '');
+                urlInput.value = savedUrl
+                    ? `${savedUrl}/course/view.php?id=`
+                    : 'https://uslt.aralinks.com/course/view.php?id=2';
+            }
+
+            // Reload saved credentials into the modal fields every time it opens
+            this.$watch('open', val => {
+                if (!val) return;
+                const saved = this._load();
+                this.modalToken  = saved?.token  || '';
+                this.modalCookie = saved?.cookie || '';
+                this.modalUrl    = saved?.url    || '';
+                this.tokenStatus = '';
+                this.showToken   = false;
+                this.showCookie  = false;
+            });
+        },
+
+        toggleTheme() {
+            this.darkMode = !this.darkMode;
+            localStorage.setItem('moodleTheme', this.darkMode ? 'dark' : 'light');
+            document.body.classList.toggle('light-mode', !this.darkMode);
+        },
+
+        _load() {
+            try {
+                const raw = localStorage.getItem(this.LS_KEY);
+                return raw ? JSON.parse(atob(raw)) : null;
+            } catch (_) { return null; }
+        },
+
+        _apply(token, cookie) {
+            document.getElementById('wsToken').value    = token  || '';
+            document.getElementById('sessionKey').value = cookie || '';
+        },
+
+        _applyUrl(url) {
+            const el = document.getElementById('courseUrl');
+            if (el && url) el.placeholder = `${url}/course/view.php?id=\nOne URL per line for multiple courses`;
+        },
+
+        saveCreds() {
+            const token  = this.modalToken.trim();
+            const cookie = this.modalCookie.trim();
+            const url    = this.modalUrl.trim().replace(/\/$/, '');
+            localStorage.setItem(this.LS_KEY, btoa(JSON.stringify({ token, cookie, url })));
+            this._apply(token, cookie);
+            if (url) this._applyUrl(url);
+            this.hasCreds = !!(token || cookie);
+            this.open = false;
+            const el = document.getElementById('statusMessage');
+            el.textContent = 'Credentials saved. Enter course URL and click Generate Report.';
+            el.className = 'status-msg status-msg--success';
+        },
+
+        clearCreds() {
+            this.modalToken  = '';
+            this.modalCookie = '';
+            this.modalUrl    = '';
+        },
+
+        onTokenInput() {
+            clearTimeout(this.tokenTimer);
+            this.tokenStatus = '';
+            this.tokenTimer = setTimeout(() => this.validateToken(), 800);
+        },
+
+        async validateToken() {
+            const token = this.modalToken.trim();
+            const serverUrl = this.modalUrl.trim();
+            if (!token || !serverUrl) { this.tokenStatus = ''; return; }
+            let baseUrl;
+            try { new URL(serverUrl); baseUrl = serverUrl.replace(/\/$/, ''); } catch { this.tokenStatus = ''; return; }
+            this.tokenStatus = 'checking';
+            try {
+                const params = new URLSearchParams({
+                    wstoken: token,
+                    wsfunction: 'core_webservice_get_site_info',
+                    moodlewsrestformat: 'json',
+                });
+                const targetUrl = `${baseUrl}/webservice/rest/server.php?${params}`;
+                const res  = await fetch(apiProxyUrl(targetUrl));
+                const data = await res.json();
+                if (data?.exception || data?.error || data?.errorcode) {
+                    this.tokenStatus = 'invalid';
+                } else if (data?.sitename || data?.siteurl) {
+                    this.tokenStatus = 'valid';
+                } else {
+                    this.tokenStatus = 'invalid';
+                }
+            } catch {
+                this.tokenStatus = 'failed';
+            }
+        }
+    };
+}
+</script>
+
+<script>
+function strategyApp() {
+  return {
+    open: false,
+    strategies: [],
+    newStrategyName: '',
+    newStrategyKeyword: '',
+    keywordInputs: {},
+    status: '',
+    error: '',
+
+    async init() {
+      const res = await fetch('/strategies');
+      const data = await res.json();
+      this.strategies = data.strategies || [];
+    },
+
+    isKeywordDuplicate(keyword, excludeStrategyName = null) {
+      const kw = keyword.trim().toLowerCase();
+      for (const s of this.strategies) {
+        if (s.name === excludeStrategyName) continue;
+        if (s.keywords.map(k => k.toLowerCase()).includes(kw)) {
+          return s.name;
+        }
+      }
+      return null;
+    },
+
+    async addKeyword(strategyName) {
+      const kw = (this.keywordInputs[strategyName] || '').trim();
+      if (!kw) return;
+      const owner = this.isKeywordDuplicate(kw);
+      if (owner) {
+        this.error = `"${kw}" is already used by "${owner}"`;
+        return;
+      }
+      this.error = '';
+      const s = this.strategies.find(s => s.name === strategyName);
+      if (s) s.keywords.push(kw);
+      this.keywordInputs[strategyName] = '';
+      await this.save();
+    },
+
+    removeKeyword(strategyName, keyword) {
+      const s = this.strategies.find(s => s.name === strategyName);
+      if (s) s.keywords = s.keywords.filter(k => k !== keyword);
+      this.save();
+    },
+
+    async addStrategy() {
+      const name = this.newStrategyName.trim();
+      const kw   = this.newStrategyKeyword.trim();
+      if (!name) return;
+      if (this.strategies.find(s => s.name.toLowerCase() === name.toLowerCase())) {
+        this.error = `Strategy "${name}" already exists.`;
+        return;
+      }
+      if (kw) {
+        const owner = this.isKeywordDuplicate(kw);
+        if (owner) {
+          this.error = `"${kw}" is already used by "${owner}"`;
+          return;
+        }
+      }
+      this.error = '';
+      this.strategies.push({
+        name,
+        keywords: kw ? [kw] : [],
+        isDefault: false
+      });
+      this.newStrategyName = '';
+      this.newStrategyKeyword = '';
+      await this.save();
+    },
+
+    deleteStrategy(strategyName) {
+      const s = this.strategies.find(s => s.name === strategyName);
+      if (s && s.isDefault) return;
+      this.strategies = this.strategies.filter(s => s.name !== strategyName);
+      this.save();
+    },
+
+    async save() {
+      this.status = 'saving';
+      try {
+        const isLocal = location.hostname === 'localhost' || location.hostname === '127.0.0.1';
+        await fetch(isLocal ? '/strategies' : '/api/strategies', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ strategies: this.strategies })
+        });
+        this.status = 'saved';
+        window.dispatchEvent(new CustomEvent('strategies-updated'));
+        setTimeout(() => this.status = '', 2000);
+      } catch (e) {
+        this.status = 'error';
+      }
+    }
+  };
+}
+</script>
+
+<script>
+function subjectApp() {
+  return {
+    subjects: [],
+    newSubjectName: '',
+    newSubjectKeyword: '',
+    keywordInputs: {},
+    status: '',
+    error: '',
+
+    async init() {
+      const res = await fetch('/subjects');
+      const data = await res.json();
+      this.subjects = data.subjects || [];
+    },
+
+    isKeywordDuplicate(keyword, excludeSubjectName = null) {
+      const kw = keyword.trim().toLowerCase();
+      for (const s of this.subjects) {
+        if (s.name === excludeSubjectName) continue;
+        if (s.keywords.map(k => k.toLowerCase()).includes(kw)) return s.name;
+      }
+      return null;
+    },
+
+    async addKeyword(subjectName) {
+      const kw = (this.keywordInputs[subjectName] || '').trim();
+      if (!kw) return;
+      const owner = this.isKeywordDuplicate(kw);
+      if (owner) { this.error = `"${kw}" is already used by "${owner}"`; return; }
+      this.error = '';
+      const s = this.subjects.find(s => s.name === subjectName);
+      if (s) s.keywords.push(kw);
+      this.keywordInputs[subjectName] = '';
+      await this.save();
+    },
+
+    removeKeyword(subjectName, keyword) {
+      const s = this.subjects.find(s => s.name === subjectName);
+      if (s) s.keywords = s.keywords.filter(k => k !== keyword);
+      this.save();
+    },
+
+    async addSubject() {
+      const name = this.newSubjectName.trim();
+      const kw   = this.newSubjectKeyword.trim();
+      if (!name) return;
+      if (this.subjects.find(s => s.name.toLowerCase() === name.toLowerCase())) {
+        this.error = `Subject "${name}" already exists.`; return;
+      }
+      if (kw) {
+        const owner = this.isKeywordDuplicate(kw);
+        if (owner) { this.error = `"${kw}" is already used by "${owner}"`; return; }
+      }
+      this.error = '';
+      this.subjects.push({ name, keywords: kw ? [kw] : [], isDefault: false });
+      this.newSubjectName = '';
+      this.newSubjectKeyword = '';
+      await this.save();
+    },
+
+    deleteSubject(subjectName) {
+      const s = this.subjects.find(s => s.name === subjectName);
+      if (s && s.isDefault) return;
+      this.subjects = this.subjects.filter(s => s.name !== subjectName);
+      this.save();
+    },
+
+    async save() {
+      this.status = 'saving';
+      try {
+        const isLocal = location.hostname === 'localhost' || location.hostname === '127.0.0.1';
+        await fetch(isLocal ? '/subjects' : '/api/subjects', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ subjects: this.subjects })
+        });
+        this.status = 'saved';
+        window.dispatchEvent(new CustomEvent('subjects-updated'));
+        setTimeout(() => this.status = '', 2000);
+      } catch {
+        this.status = 'error';
+      }
+    }
+  };
+}
+</script>
+
+<script src="app.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+</body>
+</html>
+
+]]>
+</file>
+<file name="server.js">
+<![CDATA[
+/**
+ * Local CORS proxy for Moodle Activity Report
+ * Serves index.html and proxies all requests to Moodle (including session cookies).
+ *
+ * Run:        node server.js
+ * Then open:  http://localhost:8080
+ *
+ * No npm packages needed — uses only Node.js built-ins.
+ */
+const http  = require('http');
+const https = require('https');
+const fs    = require('fs');
+const path  = require('path');
+const url   = require('url');
+
+const PORT = 8080;
+const HTML = path.join(__dirname, 'index.html');
+const STRATEGIES_FILE = path.join(__dirname, 'data', 'strategies.json');
+const SUBJECTS_FILE   = path.join(__dirname, 'data', 'subjects.json');
+
+const DEFAULT_STRATEGIES = [
+    { "name": "assessment-assisted discussion", "keywords": ["assessment-assisted"], "isDefault": true },
+    { "name": "collaborative learning",         "keywords": ["collaborative"], "isDefault": true },
+    { "name": "content discussion",             "keywords": ["content discussion"], "isDefault": true },
+    { "name": "drill/practice/exercise",        "keywords": ["drill", "practice", "exercise"], "isDefault": true },
+    { "name": "election",                       "keywords": ["election"], "isDefault": true },
+    { "name": "enrichment",                     "keywords": ["enrichment"], "isDefault": true },
+    { "name": "entrance exam",                  "keywords": ["entrance exam", "entrance"], "isDefault": true },
+    { "name": "evaluation - student",           "keywords": ["evaluation student"], "isDefault": true },
+    { "name": "evaluation - student services",  "keywords": ["evaluation student services"], "isDefault": true },
+    { "name": "evaluation - teacher",           "keywords": ["evaluation teacher"], "isDefault": true },
+    { "name": "evaluation - parents",           "keywords": ["evaluation parents"], "isDefault": true },
+    { "name": "family day",                     "keywords": ["family day"], "isDefault": true },
+    { "name": "focus group discussion",         "keywords": ["focus group", "fgd"], "isDefault": true },
+    { "name": "formative assessment",           "keywords": ["formative"], "isDefault": true },
+    { "name": "game",                           "keywords": ["game"], "isDefault": true },
+    { "name": "interactive lecture demonstration", "keywords": ["interactive lecture", "ild"], "isDefault": true },
+    { "name": "listening activity",             "keywords": ["listening"], "isDefault": true },
+    { "name": "motivation",                     "keywords": ["motivation"], "isDefault": true },
+    { "name": "peer assessment",                "keywords": ["peer assessment", "peer"], "isDefault": true },
+    { "name": "performance task",               "keywords": ["performance task", "pt"], "isDefault": true },
+    { "name": "Playground",                     "keywords": ["playground"], "isDefault": true },
+    { "name": "post-assessment",                "keywords": ["post-assessment", "post assessment", "posttest"], "isDefault": true },
+    { "name": "pre-assessment",                 "keywords": ["pre-assessment", "pre assessment", "pretest"], "isDefault": true },
+    { "name": "project presentation",           "keywords": ["project presentation", "project"], "isDefault": true },
+    { "name": "quiz bee",                       "keywords": ["quiz bee"], "isDefault": true },
+    { "name": "reading activity",               "keywords": ["reading"], "isDefault": true },
+    { "name": "reference material",             "keywords": ["reference"], "isDefault": true },
+    { "name": "remediation",                    "keywords": ["remediation"], "isDefault": true },
+    { "name": "research",                       "keywords": ["research"], "isDefault": true },
+    { "name": "reviewer",                       "keywords": ["reviewer"], "isDefault": true },
+    { "name": "self-assessment",                "keywords": ["self-assessment", "self assessment"], "isDefault": true },
+    { "name": "speaking activity",              "keywords": ["speaking"], "isDefault": true },
+    { "name": "sports fest",                    "keywords": ["sports fest", "sports"], "isDefault": true },
+    { "name": "stakeholders engagement",        "keywords": ["stakeholders"], "isDefault": true },
+    { "name": "summative assessment",           "keywords": ["summative"], "isDefault": true },
+    { "name": "synchronous discussion",         "keywords": ["synchronous"], "isDefault": true },
+    { "name": "tutorial",                       "keywords": ["tutorial"], "isDefault": true },
+    { "name": "viewing activity",               "keywords": ["viewing"], "isDefault": true },
+    { "name": "lab activity",                   "keywords": ["lab"], "isDefault": true },
+    { "name": "writing activity",               "keywords": ["writing"], "isDefault": true },
+    { "name": "file upload and monitoring sheet", "keywords": ["monitoring sheet", "file upload"], "isDefault": true },
+    { "name": "periodic test",                  "keywords": ["periodic test", "periodic"], "isDefault": true },
+    { "name": "summary of scores",              "keywords": ["summary of scores", "summary"], "isDefault": true }
+];
+
+const DEFAULT_SUBJECTS = [
+    { "name": "Christian Living and Values Education", "keywords": ["Christian Living", "Values Education", "CLE"], "isDefault": true },
+    { "name": "Computer",      "keywords": ["Computer", "ICT", "Programming"],                "isDefault": true },
+    { "name": "English",       "keywords": ["English", "Reading"],                            "isDefault": true },
+    { "name": "Filipino",      "keywords": ["Filipino", "Tagalog"],                           "isDefault": true },
+    { "name": "MAPEH",         "keywords": ["MAPEH", "Music", "Arts", "PE", "Health"],        "isDefault": true },
+    { "name": "Mathematics",   "keywords": ["Math", "Mathematics", "Algebra", "Geometry"],    "isDefault": true },
+    { "name": "Science",       "keywords": ["Science", "Physics", "Chemistry", "Biology"],    "isDefault": true },
+    { "name": "Social Studies","keywords": ["Social Studies", "History", "Geography"],         "isDefault": true },
+    { "name": "TLE",           "keywords": ["TLE", "Technology", "Livelihood"],               "isDefault": true }
+];
+
+// Ensure data/ dir and seed files exist on startup
+fs.mkdirSync(path.join(__dirname, 'data'), { recursive: true });
+if (!fs.existsSync(STRATEGIES_FILE)) {
+    fs.writeFileSync(STRATEGIES_FILE, JSON.stringify(DEFAULT_STRATEGIES, null, 2), 'utf8');
+}
+if (!fs.existsSync(SUBJECTS_FILE)) {
+    fs.writeFileSync(SUBJECTS_FILE, JSON.stringify(DEFAULT_SUBJECTS, null, 2), 'utf8');
+}
+
+const CORS = {
+    'Access-Control-Allow-Origin':  '*',
+    'Access-Control-Allow-Methods': 'GET, OPTIONS',
+    'Access-Control-Allow-Headers': 'Accept, Content-Type, Cookie',
+};
+
+function proxyTo(targetUrl, cookie, acceptHeader, res) {
+    let parsed;
+    try { parsed = url.parse(targetUrl); }
+    catch { res.writeHead(400, CORS); res.end(JSON.stringify({ error: 'Bad URL' })); return; }
+
+    const proto = parsed.protocol === 'https:' ? https : http;
+    const reqHeaders = {
+        'Accept':     acceptHeader || 'application/json',
+        'User-Agent': 'Mozilla/5.0 MoodleReportProxy/1.0',
+    };
+    if (cookie) reqHeaders['Cookie'] = cookie.startsWith('MoodleSession=')
+        ? cookie : `MoodleSession=${cookie}`;
+
+    const options = {
+        hostname: parsed.hostname,
+        port:     parsed.port || (parsed.protocol === 'https:' ? 443 : 80),
+        path:     parsed.path,
+        method:   'GET',
+        headers:  reqHeaders,
+    };
+
+    const req = proto.request(options, upstream => {
+        // Detect content type from upstream
+        const ct = upstream.headers['content-type'] || 'application/octet-stream';
+        res.writeHead(upstream.statusCode, { ...CORS, 'Content-Type': ct });
+        upstream.pipe(res);
+    });
+    req.on('error', err => {
+        res.writeHead(502, CORS);
+        res.end(JSON.stringify({ error: err.message }));
+    });
+    req.end();
+}
+
+http.createServer((req, res) => {
+    const parsed = url.parse(req.url, true);
+
+    if (req.method === 'OPTIONS') {
+        res.writeHead(204, CORS); res.end(); return;
+    }
+
+    // GET /strategies — return saved strategies list
+    if (req.method === 'GET' && parsed.pathname === '/strategies') {
+        try {
+            const data = JSON.parse(fs.readFileSync(STRATEGIES_FILE, 'utf8'));
+            res.writeHead(200, { ...CORS, 'Content-Type': 'application/json' });
+            res.end(JSON.stringify({ strategies: data }));
+        } catch {
+            res.writeHead(500, { ...CORS, 'Content-Type': 'application/json' });
+            res.end(JSON.stringify({ error: 'Failed to read strategies' }));
+        }
+        return;
+    }
+
+    // GET /subjects
+    if (req.method === 'GET' && parsed.pathname === '/subjects') {
+        try {
+            const data = JSON.parse(fs.readFileSync(SUBJECTS_FILE, 'utf8'));
+            res.writeHead(200, { ...CORS, 'Content-Type': 'application/json' });
+            res.end(JSON.stringify({ subjects: data }));
+        } catch {
+            res.writeHead(500, { ...CORS, 'Content-Type': 'application/json' });
+            res.end(JSON.stringify({ error: 'Failed to read subjects' }));
+        }
+        return;
+    }
+
+    // POST /subjects
+    if (req.method === 'POST' && parsed.pathname === '/subjects') {
+        let body = '';
+        req.on('data', chunk => { body += chunk; });
+        req.on('end', () => {
+            try {
+                const payload = JSON.parse(body);
+                if (!payload || !Array.isArray(payload.subjects) || payload.subjects.length === 0) {
+                    res.writeHead(400, { ...CORS, 'Content-Type': 'application/json' });
+                    res.end(JSON.stringify({ error: 'Invalid payload' }));
+                    return;
+                }
+                fs.writeFileSync(SUBJECTS_FILE, JSON.stringify(payload.subjects, null, 2), 'utf8');
+                res.writeHead(200, { ...CORS, 'Content-Type': 'application/json' });
+                res.end(JSON.stringify({ ok: true }));
+            } catch {
+                res.writeHead(500, { ...CORS, 'Content-Type': 'application/json' });
+                res.end(JSON.stringify({ error: 'Failed to save subjects' }));
+            }
+        });
+        req.on('error', () => {
+            res.writeHead(500, { ...CORS, 'Content-Type': 'application/json' });
+            res.end(JSON.stringify({ error: 'Failed to save subjects' }));
+        });
+        return;
+    }
+
+    // POST /strategies — persist updated strategies list
+    if (req.method === 'POST' && parsed.pathname === '/strategies') {
+        let body = '';
+        req.on('data', chunk => { body += chunk; });
+        req.on('end', () => {
+            try {
+                const payload = JSON.parse(body);
+                if (!payload || !Array.isArray(payload.strategies) || payload.strategies.length === 0) {
+                    res.writeHead(400, { ...CORS, 'Content-Type': 'application/json' });
+                    res.end(JSON.stringify({ error: 'Invalid payload' }));
+                    return;
+                }
+                fs.writeFileSync(STRATEGIES_FILE, JSON.stringify(payload.strategies, null, 2), 'utf8');
+                res.writeHead(200, { ...CORS, 'Content-Type': 'application/json' });
+                res.end(JSON.stringify({ ok: true }));
+            } catch {
+                res.writeHead(500, { ...CORS, 'Content-Type': 'application/json' });
+                res.end(JSON.stringify({ error: 'Failed to save strategies' }));
+            }
+        });
+        req.on('error', () => {
+            res.writeHead(500, { ...CORS, 'Content-Type': 'application/json' });
+            res.end(JSON.stringify({ error: 'Failed to save strategies' }));
+        });
+        return;
+    }
+
+    // /proxy?url=<encoded-moodle-url>[&cookie=<session-cookie>][&accept=<header>]
+    if (parsed.pathname === '/proxy') {
+        const target = parsed.query.url;
+        if (!target) {
+            res.writeHead(400, CORS);
+            res.end(JSON.stringify({ error: 'Missing ?url= parameter' }));
+            return;
+        }
+        const cookie = parsed.query.cookie || '';
+        const accept = parsed.query.accept  || 'application/json';
+        proxyTo(target, cookie, accept, res);
+        return;
+    }
+
+    // Serve static files (output.css, app.js, src/icons/*.svg) or fall back to index.html
+    const MIME = {
+        '.css': 'text/css; charset=utf-8',
+        '.js':  'application/javascript; charset=utf-8',
+        '.svg': 'image/svg+xml; charset=utf-8',
+    };
+    const staticPath = path.join(__dirname, parsed.pathname);
+    const ext = path.extname(staticPath);
+    if (MIME[ext] && fs.existsSync(staticPath)) {
+        fs.readFile(staticPath, (err, data) => {
+            if (err) { res.writeHead(404, CORS); res.end('Not found'); return; }
+            res.writeHead(200, { ...CORS, 'Content-Type': MIME[ext] });
+            res.end(data);
+        });
+        return;
+    }
+    fs.readFile(HTML, (err, data) => {
+        if (err) { res.writeHead(404); res.end('index.html not found in: ' + __dirname); return; }
+        res.writeHead(200, { ...CORS, 'Content-Type': 'text/html; charset=utf-8' });
+        res.end(data);
+    });
+
+}).listen(PORT, '127.0.0.1', () => {
+    console.log('');
+    console.log('  Moodle Activity Report — Local Server');
+    console.log('  ======================================');
+    console.log(`  Open:  http://localhost:${PORT}`);
+    console.log('  Stop:  Ctrl+C');
+    console.log('');
+});
+
+]]>
+</file>
+</files>

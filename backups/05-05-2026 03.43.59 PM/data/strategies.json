@@ -1,0 +1,314 @@
+[
+  {
+    "name": "assessment-assisted discussion",
+    "keywords": [
+      "assessment-assisted"
+    ],
+    "isDefault": true
+  },
+  {
+    "name": "collaborative learning",
+    "keywords": [
+      "collaborative"
+    ],
+    "isDefault": true
+  },
+  {
+    "name": "content discussion",
+    "keywords": [
+      "content discussion"
+    ],
+    "isDefault": true
+  },
+  {
+    "name": "drill/practice/exercise",
+    "keywords": [
+      "drill",
+      "practice",
+      "exercise"
+    ],
+    "isDefault": true
+  },
+  {
+    "name": "election",
+    "keywords": [
+      "election"
+    ],
+    "isDefault": true
+  },
+  {
+    "name": "enrichment",
+    "keywords": [
+      "enrichment"
+    ],
+    "isDefault": true
+  },
+  {
+    "name": "entrance exam",
+    "keywords": [
+      "entrance exam"
+    ],
+    "isDefault": true
+  },
+  {
+    "name": "evaluation - student",
+    "keywords": [
+      "evaluation student"
+    ],
+    "isDefault": true
+  },
+  {
+    "name": "evaluation - student services",
+    "keywords": [
+      "evaluation student services"
+    ],
+    "isDefault": true
+  },
+  {
+    "name": "evaluation - teacher",
+    "keywords": [
+      "evaluation teacher"
+    ],
+    "isDefault": true
+  },
+  {
+    "name": "evaluation - parents",
+    "keywords": [
+      "evaluation parents"
+    ],
+    "isDefault": true
+  },
+  {
+    "name": "family day",
+    "keywords": [
+      "family day"
+    ],
+    "isDefault": true
+  },
+  {
+    "name": "focus group discussion",
+    "keywords": [
+      "focus group discussion"
+    ],
+    "isDefault": true
+  },
+  {
+    "name": "formative assessment",
+    "keywords": [
+      "formative"
+    ],
+    "isDefault": true
+  },
+  {
+    "name": "game",
+    "keywords": [
+      "game"
+    ],
+    "isDefault": true
+  },
+  {
+    "name": "interactive lecture demonstration",
+    "keywords": [
+      "interactive lecture",
+      "ild"
+    ],
+    "isDefault": true
+  },
+  {
+    "name": "listening activity",
+    "keywords": [
+      "listening"
+    ],
+    "isDefault": true
+  },
+  {
+    "name": "motivation",
+    "keywords": [
+      "motivation"
+    ],
+    "isDefault": true
+  },
+  {
+    "name": "peer assessment",
+    "keywords": [
+      "peer assessment"
+    ],
+    "isDefault": true
+  },
+  {
+    "name": "performance task",
+    "keywords": [
+      "performance task",
+      "GPT"
+    ],
+    "isDefault": true
+  },
+  {
+    "name": "Playground",
+    "keywords": [
+      "playground"
+    ],
+    "isDefault": true
+  },
+  {
+    "name": "post-assessment",
+    "keywords": [
+      "post-assessment",
+      "post assessment",
+      "posttest"
+    ],
+    "isDefault": true
+  },
+  {
+    "name": "pre-assessment",
+    "keywords": [
+      "pre-assessment",
+      "pre assessment",
+      "pretest"
+    ],
+    "isDefault": true
+  },
+  {
+    "name": "project presentation",
+    "keywords": [
+      "project presentation"
+    ],
+    "isDefault": true
+  },
+  {
+    "name": "quiz bee",
+    "keywords": [
+      "quiz bee"
+    ],
+    "isDefault": true
+  },
+  {
+    "name": "reading activity",
+    "keywords": [
+      "reading"
+    ],
+    "isDefault": true
+  },
+  {
+    "name": "reference material",
+    "keywords": [
+      "reference material"
+    ],
+    "isDefault": true
+  },
+  {
+    "name": "remediation",
+    "keywords": [
+      "remediation"
+    ],
+    "isDefault": true
+  },
+  {
+    "name": "research",
+    "keywords": [
+      "research"
+    ],
+    "isDefault": true
+  },
+  {
+    "name": "reviewer",
+    "keywords": [
+      "reviewer"
+    ],
+    "isDefault": true
+  },
+  {
+    "name": "self-assessment",
+    "keywords": [
+      "self-assessment",
+      "self assessment"
+    ],
+    "isDefault": true
+  },
+  {
+    "name": "speaking activity",
+    "keywords": [
+      "speaking activity"
+    ],
+    "isDefault": true
+  },
+  {
+    "name": "sports fest",
+    "keywords": [
+      "sports fest",
+      "sportsfest"
+    ],
+    "isDefault": true
+  },
+  {
+    "name": "stakeholders engagement",
+    "keywords": [
+      "stakeholders"
+    ],
+    "isDefault": true
+  },
+  {
+    "name": "summative assessment",
+    "keywords": [
+      "summative"
+    ],
+    "isDefault": true
+  },
+  {
+    "name": "synchronous discussion",
+    "keywords": [
+      "synchronous discussion"
+    ],
+    "isDefault": true
+  },
+  {
+    "name": "tutorial",
+    "keywords": [
+      "tutorial"
+    ],
+    "isDefault": true
+  },
+  {
+    "name": "viewing activity",
+    "keywords": [
+      "viewing activity"
+    ],
+    "isDefault": true
+  },
+  {
+    "name": "lab activity",
+    "keywords": [
+      "lab activity"
+    ],
+    "isDefault": true
+  },
+  {
+    "name": "writing activity",
+    "keywords": [
+      "writing activity"
+    ],
+    "isDefault": true
+  },
+  {
+    "name": "file upload and monitoring sheet",
+    "keywords": [
+      "monitoring sheet",
+      "file upload"
+    ],
+    "isDefault": true
+  },
+  {
+    "name": "periodic test",
+    "keywords": [
+      "periodic test"
+    ],
+    "isDefault": true
+  },
+  {
+    "name": "summary of scores",
+    "keywords": [
+      "summary of scores"
+    ],
+    "isDefault": true
+  }
+]

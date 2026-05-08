@@ -1,0 +1,7 @@
+{
+  "rewrites": [
+    { "source": "/proxy",      "destination": "/api/proxy" },
+    { "source": "/strategies", "destination": "/api/strategies" },
+    { "source": "/subjects",   "destination": "/api/subjects" }
+  ]
+}
