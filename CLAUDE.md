@@ -69,12 +69,13 @@ Remote Moodle Instance
 1. `fetchBtn` click → extract `baseUrl` via `indexOf('/course/')` (preserves subdirectory path)
 2. Three parallel WS calls: `core_course_get_courses`, `core_course_get_contents`, `core_enrol_get_enrolled_users`
 3. `fetchSesskey()` scrapes `/"sesskey":"([a-zA-Z0-9]+)"/` from `/course/view.php?id={id}`
-4. `scrapeLogPage()` per module (BATCH=6 concurrent):
-   - **Step 1** — `modaction=c` fetch → `eventname === 'Course module created'` found → **VERIFIED**
-   - **Step 2** — broad fetch (no modaction), only if Step 1 empty → oldest event → **INFERRED**
-   - **Step 3** — `mod.added` fallback when both empty → **ESTIMATED**
-5. Log endpoint returns `[[{...}]]` (double-wrapped) — unwrap: `Array.isArray(parsed[0]) ? parsed[0] : parsed`
-6. `parseMoodleJsonTs()` converts `DD/MM/YY, HH:MM:SS` → Unix seconds with full precision (needed for INFERRED sort)
+4. `buildRows()` fetches `sesskey` and `studentIds` in parallel, then runs `scrapeLogPage()` per module (BATCH=6 concurrent):
+   - **Step 1** — `modaction=c` fetch → `eventname === 'Course module created'` found → **VERIFIED**; then a second broad fetch (modaction='') retrieves all entries for peak computation
+   - **Step 2** — broad fetch (no modaction), only if Step 1 empty → oldest event → **INFERRED**; same entries used for peak
+   - **Step 3** — `mod.added` fallback when both empty → **ESTIMATED**; peak is null
+5. `scrapeLogPage()` returns `{ creation: {...}, peak: { date, count } | null }` — callers read `.creation` and `.peak` separately
+6. Log endpoint returns `[[{...}]]` (double-wrapped) — unwrap: `Array.isArray(parsed[0]) ? parsed[0] : parsed`
+7. `parseMoodleJsonTs()` converts `DD/MM/YY, HH:MM:SS` → Unix seconds with full precision (needed for INFERRED sort)
 
 **Tab split:** `teacherData` = `modname !== 'url'`; `oerData` = `modname === 'url'`; `allData` = all rows. ALL tab is default.
 
@@ -88,6 +89,8 @@ Remote Moodle Instance
 | 2 | `INFERRED` | FIRST (orange) | Oldest event from Step 2 broad fetch |
 | 3 | `ESTIMATED` | EST (yellow) | Both fetches empty; `mod.added` used |
 
+**Row object peak fields:** `peakDate: string | null`, `peakCount: number` — populated from `scrapeLogPage().peak`; null/0 when ESTIMATED and no log data.
+
 ---
 
 ## Column Filters
@@ -97,6 +100,32 @@ Remote Moodle Instance
 - Filter order in `applyAndRender()`: sort → type → date (AND logic)
 - Both cleared on every new fetch and by `resetTable()`; CSV export mirrors same logic
 - Dropdown scans `getActiveRows()` so already-hidden values stay accessible
+
+---
+
+## Date Mode Toggle
+
+- **Button** — `#dateModeBtn` in the toolbar (`arrow-down-up.svg`); disabled until fetch succeeds; enabled/disabled via `setDownloadDisabled(dateModeBtn, ...)` alongside other toolbar buttons
+- **State** — `let dateMode = 'creation'` (`'creation' | 'peak'`); reset to `'creation'` on every new fetch
+- **Active state** — CSS modifier class `.date-mode-btn--active` toggled via `dateModeBtn.classList.toggle('date-mode-btn--active', dateMode === 'peak')`; **never use Tailwind classes dynamically**
+- **Rendering** — `buildDataRow()` reads `dateMode` to decide which date/badge to render:
+  - `'creation'` → `row.date` + LOG/FIRST/EST badge (existing behaviour)
+  - `'peak'` + `row.peakDate` → `row.peakDate` + PEAK badge (`.date-badge-peak`, sky blue)
+  - `'peak'` + no `row.peakDate` → falls back to `row.date` + EST badge
+
+**`fetchStudentIds(baseUrl, token, courseId)`**
+- Uses `apiFetch()` with `core_enrol_get_enrolled_users` — **never raw `fetch()`**
+- Returns `Set<string>` of user IDs where `roles.some(r => r.shortname === 'student')`
+- IDs stored as **strings** (`String(user.id)`) — the log entries don't carry a numeric `userid`
+- Returns empty `Set` on any failure — never throws
+
+**`computePeakDay(entries, studentIds = new Set())`**
+- When `studentIds.size > 0`: extract user ID from `e.description` via `/user with id '(\d+)'/`; skip entry if regex doesn't match or ID not in Set
+- When `studentIds` is empty (fetch failed): count all entries — do not return null as a fallback
+- **IMPORTANT:** log entries have NO `userid` field — always parse from `e.description`
+
+**`buildRows()` signature:** `buildRows(sections, baseUrl, courseId, token, sessionCookie, fallbackUser, courseName, detectedSubject, courseGroupIndex, onProgress)`
+- `token` is the 4th argument (added after `courseId`) — both callers (`processCourse` and fetchBtn handler) must pass it
 
 ---
 
@@ -137,6 +166,7 @@ All icons: `src/icons/*.svg` (Lucide-style, `stroke="currentColor"`). Always use
 | `book-open-check.svg` | Course separator row heatmap trigger button |
 | `eye.svg` | Reveal toggle — show masked credential field |
 | `eye-off.svg` | Reveal toggle — hide revealed credential field |
+| `arrow-down-up.svg` | Date Mode toggle button (creation ↔ peak) |
 
 Tinting: `.icon-img` CSS filter in `index.html <style>` block (dark default) + `body.light-mode .icon-img` override.
 Muted icons: add `style="opacity:0.55"` inline (single-property — acceptable).
@@ -181,8 +211,8 @@ After any change, confirm:
 1. `npm run build` completes without errors
 2. `grep -P 'style="[^"]*;[^"]*;' index.html app.js` returns zero results (no multi-prop inline styles)
 3. `npm start` → open `http://localhost:8080` → trigger a report fetch
-4. Table renders; badges show correct VERIFIED / INFERRED / ESTIMATED tiers
-5. Dark/light toggle, CSV download, type filter, and date filter all function correctly
+4. Table renders; badges show correct VERIFIED / INFERRED / ESTIMATED tiers; Date Mode toggle switches to PEAK badges
+5. Dark/light toggle, CSV download, type filter, date filter, and Date Mode toggle all function correctly
 6. No CORS errors in browser DevTools Network tab
 
 ---
@@ -193,6 +223,9 @@ After any change, confirm:
 - **`sesskey` is per-session CSRF token** — if `/course/view.php` fetch fails, all log downloads return empty
 - **`output.css` missing or stale** → page renders completely unstyled
 - **`parseMoodleJsonTs()` full precision** — required for INFERRED oldest-event selection; do not simplify to date-only
+- **Log entries have no `userid` field** — user ID must be extracted from `e.description` via `/user with id '(\d+)'/`; `e.userid` is always undefined
+- **`fetchStudentIds` stores IDs as strings** — `String(user.id)`; always compare with string keys, never numbers
+- **VERIFIED path does two fetches** — `modaction=c` for creation, then `modaction=''` for peak; the second fetch is intentional and required
 
 ---
 

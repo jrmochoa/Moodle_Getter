@@ -498,6 +498,11 @@
                     <img src="src/icons/calendars.svg" width="13" height="13" class="icon-img" alt="">
                 </button>
 
+                <!-- Date Mode toggle -->
+                <button id="dateModeBtn" class="tech-btn btn-icon-only" title="Switch to Peak Date" disabled>
+                    <img src="src/icons/arrow-down-up.svg" width="13" height="13" class="icon-img" alt="">
+                </button>
+
                 <!-- Row count -->
                 <span id="rowCount" class="row-count-badge">0 entries</span>
 
@@ -545,6 +550,10 @@
             <span class="legend-item">
                 <span class="legend-dot legend-dot-estimated"></span>
                 EST = fallback (mod.added / timecreated)
+            </span>
+            <span class="legend-item">
+                <span class="legend-dot legend-dot-peak"></span>
+                PEAK = busiest activity day
             </span>
         </div>
 

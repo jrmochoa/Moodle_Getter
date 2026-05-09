@@ -769,6 +769,7 @@ body.light-mode .th-cell-center { color: rgba(109,40,217,.75); background: #f8f5
 .legend-dot-verified  { background: #34d399; box-shadow: 0 0 5px #34d399; }
 .legend-dot-inferred  { background: #fb923c; box-shadow: 0 0 5px #fb923c; }
 .legend-dot-estimated { background: #fbbf24; box-shadow: 0 0 5px #fbbf24; }
+.legend-dot-peak      { background: #38bdf8; box-shadow: 0 0 5px #38bdf8; }
 
 /* ── Table generated content ─────────────────────────────────────────────────── */
 .empty-state-cell {
@@ -904,9 +905,12 @@ body.light-mode .dup-modal-list { color: rgba(30,18,48,.8); }
 .date-badge-verified  { background: rgba(52,211,153,.15);  color: #34d399; border: 1px solid rgba(52,211,153,.3); }
 .date-badge-inferred  { background: rgba(251,146,60,.15);  color: #fb923c; border: 1px solid rgba(251,146,60,.3); }
 .date-badge-estimated { background: rgba(251,191,36,.15);  color: #fbbf24; border: 1px solid rgba(251,191,36,.3); }
+.date-badge-peak      { background: rgba(56,189,248,.15);  color: #38bdf8; border: 1px solid rgba(56,189,248,.3); }
 body.light-mode .date-badge-verified  { background: #d1fae5; color: #059669; border-color: #a7f3d0; }
 body.light-mode .date-badge-inferred  { background: #ffedd5; color: #ea580c; border-color: #fed7aa; }
 body.light-mode .date-badge-estimated { background: #fef3c7; color: #ca8a04; border-color: #fde68a; }
+body.light-mode .date-badge-peak      { background: #e0f2fe; color: #0284c7; border-color: #bae6fd; }
+.date-mode-btn--active { border-color: #38bdf8 !important; color: #38bdf8 !important; box-shadow: 0 0 14px rgba(56,189,248,.22); }
 
 .table-link {
     font-weight: 600;

@@ -11,6 +11,7 @@ const dupUrlList       = document.getElementById('dupUrlList');
 const dupUrlConfirmBtn = document.getElementById('dupUrlConfirmBtn');
 const dupUrlCancelBtn  = document.getElementById('dupUrlCancelBtn');
 const heatmapBtn          = document.getElementById('heatmapBtn');
+const dateModeBtn         = document.getElementById('dateModeBtn');
 const heatmapModal        = document.getElementById('heatmapModal');
 const heatmapCloseBtn     = document.getElementById('heatmapCloseBtn');
 const heatmapCourseSelect = document.getElementById('heatmapCourseSelect');
@@ -37,11 +38,13 @@ let snapshotHiddenTypes  = new Set();
 let snapshotHiddenYears  = new Set();
 let snapshotHiddenMonths = new Set();
 let activeTab        = 'all'; // 'all' | 'teachers' | 'oer'
+let dateMode         = 'peak'; // 'creation' | 'peak'
 let sortCol          = null;       // null | 'rawTs' | 'fullname' | 'activityName' | 'activityType' | 'subject' | 'strategy'
 let sortDir          = 'asc';      // 'asc' | 'desc'
 let currentRows      = [];
 let activeStrategies = [];
 let activeSubjects   = [];
+let initReady; // resolves when strategies and subjects are loaded
 let hiddenTypes      = new Set();
 let hiddenYears      = new Set();
 let hiddenMonths     = new Set();
@@ -143,7 +146,7 @@ async function loadStrategies() {
         const res = await fetch(isLocal() ? '/strategies' : '/api/strategies');
         if (!res.ok) throw new Error();
         const data = await res.json();
-        activeStrategies = data.strategies;
+        activeStrategies = Array.isArray(data) ? data : data.strategies;
     } catch (_) {
         activeStrategies = STRATEGIES;
     }
@@ -176,16 +179,22 @@ async function loadSubjects() {
         const res = await fetch(isLocal() ? '/subjects' : '/api/subjects');
         if (!res.ok) throw new Error();
         const data = await res.json();
-        activeSubjects = data.subjects;
+        activeSubjects = Array.isArray(data) ? data : data.subjects;
     } catch (_) {
         activeSubjects = DEFAULT_SUBJECTS;
     }
 }
 
-function getSubject(courseName) {
-    const name = (courseName || '').toLowerCase();
-    for (const s of activeSubjects) {
-        if (s.keywords?.some(kw => name.includes(kw.toLowerCase()))) return s.name;
+function getSubject(courseName, activityName = '', sectionName = '') {
+    // Try each tier in order; within each tier try every pipe-separated segment
+    for (const candidate of [courseName, activityName, sectionName]) {
+        if (!candidate) continue;
+        for (const seg of candidate.split('|').map(s => s.trim())) {
+            const name = seg.toLowerCase();
+            for (const s of activeSubjects) {
+                if (s.keywords?.some(kw => name.includes(kw.toLowerCase()))) return s.name;
+            }
+        }
     }
     return 'Uncategorized';
 }
@@ -355,6 +364,20 @@ async function fetchFirstAccessor(baseUrl, token, courseId) {
     return null;
 }
 
+async function fetchStudentIds(baseUrl, token, courseId) {
+    try {
+        const data = await apiFetch(baseUrl, token, 'core_enrol_get_enrolled_users', {courseid: String(courseId)});
+        if (!Array.isArray(data)) return new Set();
+        const ids = new Set();
+        for (const user of data) {
+            if (Array.isArray(user.roles) && user.roles.some(r => r.shortname === 'student')) {
+                ids.add(String(user.id));
+            }
+        }
+        return ids;
+    } catch (_) { return new Set(); }
+}
+
 // ── Log helpers — JSON download ───────────────────────────────────────────────
 
 function parseMoodleJsonDate(timeStr) {
@@ -417,7 +440,25 @@ async function fetchModuleLogsJson(baseUrl, courseId, cmid, sesskey, sessionCook
     finally { clearTimeout(timer); }
 }
 
-async function scrapeLogPage(baseUrl, courseId, cmid, sesskey, sessionCookie) {
+function computePeakDay(entries, studentIds = new Set()) {
+    const dayCounts = {};
+    for (const e of entries) {
+        if (studentIds.size > 0) {
+            const m = (e.description || '').match(/user with id '(\d+)'/);
+            if (!m || !studentIds.has(m[1])) continue;
+        }
+        const day = parseMoodleJsonDate(e.time || '');
+        if (!day) continue;
+        dayCounts[day] = (dayCounts[day] || 0) + 1;
+    }
+    let bestDay = null, bestCount = 0;
+    for (const [day, count] of Object.entries(dayCounts)) {
+        if (count > bestCount) { bestDay = day; bestCount = count; }
+    }
+    return bestDay ? { date: bestDay, count: bestCount } : null;
+}
+
+async function scrapeLogPage(baseUrl, courseId, cmid, sesskey, sessionCookie, studentIds = new Set()) {
     // Step 1: creation-only fetch (modaction=c) — fast, targeted
     const creationEntries = await fetchModuleLogsJson(baseUrl, courseId, cmid, sesskey, sessionCookie, 'c');
     if (creationEntries?.length) {
@@ -428,7 +469,11 @@ async function scrapeLogPage(baseUrl, courseId, cmid, sesskey, sessionCookie) {
             let profileUrl = '';
             const uid = (created.description || '').match(/user with id '(\d+)'/);
             if (uid) profileUrl = `${baseUrl}/user/profile.php?id=${uid[1]}`;
-            return { date: date || '', fullname, profileUrl, dateSource: 'VERIFIED', eventLabel: 'Course module created' };
+            const allEntriesForPeak = await fetchModuleLogsJson(baseUrl, courseId, cmid, sesskey, sessionCookie, '');
+            return {
+                creation: { date: date || '', fullname, profileUrl, dateSource: 'VERIFIED', eventLabel: 'Course module created' },
+                peak: computePeakDay(allEntriesForPeak || [], studentIds) ?? { date: date || '', count: 1 },
+            };
         }
     }
 
@@ -446,7 +491,10 @@ async function scrapeLogPage(baseUrl, courseId, cmid, sesskey, sessionCookie) {
             let profileUrl = '';
             const uid = (oldest.description || '').match(/user with id '(\d+)'/);
             if (uid) profileUrl = `${baseUrl}/user/profile.php?id=${uid[1]}`;
-            return { date: date || '', fullname, profileUrl, dateSource: 'INFERRED', eventLabel: `First access: ${oldest.eventname || 'user access'}` };
+            return {
+                creation: { date: date || '', fullname, profileUrl, dateSource: 'INFERRED', eventLabel: `First access: ${oldest.eventname || 'user access'}` },
+                peak: computePeakDay(allEntries, studentIds),
+            };
         }
     }
 
@@ -455,13 +503,21 @@ async function scrapeLogPage(baseUrl, courseId, cmid, sesskey, sessionCookie) {
 
 // ── Build rows ────────────────────────────────────────────────────────────────
 
-async function buildRows(sections, baseUrl, courseId, sessionCookie, fallbackUser, courseName, detectedSubject, courseGroupIndex, onProgress) {
+async function buildRows(sections, baseUrl, courseId, token, sessionCookie, fallbackUser, courseName, detectedSubject, courseGroupIndex, onProgress) {
+    const modSection = new Map(); // cmid → section name
+    for (const sec of sections) {
+        for (const mod of sec.modules || []) modSection.set(mod.id, sec.name || '');
+    }
+
     const allMods = sections.flatMap(s => s.modules || []);
     const total   = allMods.length;
     let done = 0;
 
     onProgress?.(0, `Fetching sesskey…`);
-    const sesskey = await fetchSesskey(baseUrl, courseId, sessionCookie);
+    const [sesskey, studentIds] = await Promise.all([
+        fetchSesskey(baseUrl, courseId, sessionCookie),
+        fetchStudentIds(baseUrl, token, courseId),
+    ]);
     if (!sesskey) setStatus('Warning: could not fetch sesskey — log dates may be unavailable.');
 
     onProgress?.(0, `Fetching ${total} log pages…`);
@@ -472,7 +528,7 @@ async function buildRows(sections, baseUrl, courseId, sessionCookie, fallbackUse
     for (let start = 0; start < allMods.length; start += BATCH) {
         const slice = allMods.slice(start, start + BATCH);
         const settled = await Promise.allSettled(
-            slice.map(mod => scrapeLogPage(baseUrl, courseId, mod.id, sesskey, sessionCookie))
+            slice.map(mod => scrapeLogPage(baseUrl, courseId, mod.id, sesskey, sessionCookie, studentIds))
         );
         settled.forEach((r, i) => { results[start + i] = r.value ?? null; });
         done += slice.length;
@@ -481,21 +537,26 @@ async function buildRows(sections, baseUrl, courseId, sessionCookie, fallbackUse
 
     const rows = allMods.map((mod, i) => {
         const logData    = results[i];
-        const dateSource = logData?.dateSource || 'ESTIMATED';
-        const eventLabel = logData?.eventLabel || 'Module metadata (mod.added)';
+        const creation   = logData?.creation;
+        const dateSource = creation?.dateSource || 'ESTIMATED';
+        const eventLabel = creation?.eventLabel || 'Module metadata (mod.added)';
+        const sectionName = modSection.get(mod.id) || '';
         return {
-            date:             logData?.date      || formatDate(mod.added || mod.timecreated || mod.timemodified || 0),
-            rawTs:            parseDateStrToTs(logData?.date) || mod.added || mod.timecreated || 0,
+            date:             creation?.date      || formatDate(mod.added || mod.timecreated || mod.timemodified || 0),
+            rawTs:            parseDateStrToTs(creation?.date) || mod.added || mod.timecreated || 0,
             dateSource,
             eventLabel,
             fromLog:          dateSource === 'VERIFIED',
-            fullname:         logData?.fullname   || fallbackUser?.fullname   || 'Unknown',
-            profileUrl:       logData?.profileUrl || fallbackUser?.profileUrl || null,
+            fullname:         creation?.fullname   || fallbackUser?.fullname   || 'Unknown',
+            profileUrl:       creation?.profileUrl || fallbackUser?.profileUrl || null,
+            peakDate:         logData?.peak?.date  || null,
+            peakCount:        logData?.peak?.count || 0,
             activityName:     mod.name            || `Unnamed ${mod.modname}`,
             activityUrl:      activityViewUrl(mod, baseUrl),
             activityType:     activityTypeLabel(mod.modname, mod),
             strategy:         getStrategy(mod.name || ''),
-            subject:          detectedSubject,
+            subject:          getSubject(courseName, mod.name || '', sectionName),
+            sectionName,
             modname:          mod.modname         || '',
             courseIndex:      i,
             courseGroupIndex: courseGroupIndex,
@@ -569,10 +630,26 @@ function buildDataRow(row, idx) {
 
     const tdDate = document.createElement('td');
     tdDate.className = 'td-date';
-    const BADGE_TEXT = { VERIFIED:'LOG', INFERRED:'FIRST', ESTIMATED:'EST' };
-    const badgeType  = (row.dateSource || 'ESTIMATED').toLowerCase();
-    const badge = `<span class="date-badge date-badge-${badgeType}" title="Source: ${escapeHtml(row.eventLabel || '')}">${BADGE_TEXT[row.dateSource] || 'EST'}</span>`;
-    tdDate.innerHTML = `<span class="date-chip">${escapeHtml(row.date)}</span>${badge}`;
+    const BADGE_TEXT = { VERIFIED: 'LOG', INFERRED: 'FIRST', ESTIMATED: 'EST', PEAK: 'PEAK' };
+    let dateStr, badgeClass, badgeLabel, badgeTitle;
+    if (dateMode === 'peak' && row.peakDate) {
+        dateStr    = row.peakDate;
+        badgeClass = 'date-badge-peak';
+        badgeLabel = 'PEAK';
+        badgeTitle = `Peak activity day (${row.peakCount} event${row.peakCount === 1 ? '' : 's'})`;
+    } else if (dateMode === 'peak') {
+        dateStr    = row.date;
+        badgeClass = 'date-badge-estimated';
+        badgeLabel = 'EST';
+        badgeTitle = 'No log data — estimated from module metadata';
+    } else {
+        dateStr    = row.date;
+        badgeClass = `date-badge-${(row.dateSource || 'ESTIMATED').toLowerCase()}`;
+        badgeLabel = BADGE_TEXT[row.dateSource] || 'EST';
+        badgeTitle = `Source: ${row.eventLabel || ''}`;
+    }
+    const badge = `<span class="date-badge ${badgeClass}" title="${escapeHtml(badgeTitle)}">${badgeLabel}</span>`;
+    tdDate.innerHTML = `<span class="date-chip">${escapeHtml(dateStr)}</span>${badge}`;
 
     const tdUser = document.createElement('td');
     tdUser.className = 'td-cell';
@@ -887,9 +964,16 @@ function renderHeatmapForCourse(idx) {
     // Build day-rows map: 'YYYY-MM-DD' → [row, ...]
     const dayRowsMap = {};
     rows.forEach(r => {
-        if (!r.rawTs) return;
-        const d   = new Date(r.rawTs * 1000);
-        const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+        let key;
+        if (dateMode === 'peak' && r.peakDate) {
+            // peakDate is MM/DD/YYYY — convert to YYYY-MM-DD for the map key
+            const [mm, dd, yyyy] = r.peakDate.split('/');
+            key = `${yyyy}-${mm}-${dd}`;
+        } else {
+            if (!r.rawTs) return;
+            const d = new Date(r.rawTs * 1000);
+            key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+        }
         if (!dayRowsMap[key]) dayRowsMap[key] = [];
         dayRowsMap[key].push(r);
     });
@@ -1297,7 +1381,7 @@ async function processCourse({ baseUrl, courseId }, token, sessionCookie, groupI
         fetchFirstAccessor(baseUrl, token, courseId),
     ]);
     const subject = getSubject(courseName || '');
-    return buildRows(sections, baseUrl, courseId, sessionCookie, fallbackUser, courseName, subject, groupIndex, onProgress);
+    return buildRows(sections, baseUrl, courseId, token, sessionCookie, fallbackUser, courseName, subject, groupIndex, onProgress);
 }
 
 function resetTable() {
@@ -1367,6 +1451,12 @@ setTabBarHeight();
 window.addEventListener('resize', setTabBarHeight);
 
 heatmapBtn.addEventListener('click', openHeatmapModal);
+dateModeBtn.addEventListener('click', () => {
+    dateMode = dateMode === 'creation' ? 'peak' : 'creation';
+    dateModeBtn.classList.toggle('date-mode-btn--active', dateMode === 'peak');
+    dateModeBtn.title = dateMode === 'peak' ? 'Switch to Creation Date' : 'Switch to Peak Date';
+    renderActiveTab();
+});
 heatmapCloseBtn.addEventListener('click', closeHeatmapModal);
 heatmapModal.addEventListener('click', e => { if (e.target === heatmapModal) closeHeatmapModal(); });
 heatmapCourseSelect.addEventListener('change', () => renderHeatmapForCourse(+heatmapCourseSelect.value));
@@ -1404,13 +1494,14 @@ window.addEventListener('strategies-updated', async () => {
 window.addEventListener('subjects-updated', async () => {
     await loadSubjects();
     if (tableData.length > 0) {
-        tableData.forEach(r => { r.subject = getSubject(r.courseName || ''); });
+        tableData.forEach(r => { r.subject = getSubject(r.courseName || '', r.activityName || '', r.sectionName || ''); });
         renderActiveTab();
     }
 });
 
 document.addEventListener('DOMContentLoaded', async () => {
-    await Promise.all([loadStrategies(), loadSubjects()]);
+    initReady = Promise.all([loadStrategies(), loadSubjects()]);
+    await initReady;
 
     // Activity type filter icon
     const typeFilterIcon = document.getElementById('typeFilterIcon');
@@ -1475,6 +1566,7 @@ function showDuplicateModal(dupUrls) {
 }
 
 fetchBtn.addEventListener('click', async () => {
+    await initReady;
     const urlsRaw       = document.getElementById('courseUrl').value;
     const token         = document.getElementById('wsToken').value.trim();
     const sessionCookie = document.getElementById('sessionKey').value.trim();
@@ -1535,10 +1627,12 @@ fetchBtn.addEventListener('click', async () => {
     rowCountEl.textContent = 'loading…';
     setDownloadDisabled(downloadBtn, true);
     setDownloadDisabled(heatmapBtn, true);
+    setDownloadDisabled(dateModeBtn, true);
+    dateMode = 'peak';
+    dateModeBtn.classList.add('date-mode-btn--active');
+    dateModeBtn.title = 'Switch to Creation Date';
     document.getElementById('courseNameSection').style.display = 'none';
     setStatus(`Processing ${courseEntries.length} course(s)…`);
-
-    await Promise.all([loadStrategies(), loadSubjects()]);
     setBtnLoading('Fetching course structure…');
 
     try {
@@ -1573,7 +1667,7 @@ fetchBtn.addEventListener('click', async () => {
 
             setStatus(`Course ${i + 1} / ${N} — fetching logs for "${courseName || courseId}"…`);
             const rows = await buildRows(
-                sections, baseUrl, courseId, sessionCookie, fallbackUser,
+                sections, baseUrl, courseId, token, sessionCookie, fallbackUser,
                 courseName, subject, i,
                 (frac, label) => {
                     const globalFrac = totalMods > 0
@@ -1619,6 +1713,7 @@ fetchBtn.addEventListener('click', async () => {
         setStatus(`Done. ${tableData.length} module(s) across ${N} course(s) — ${logCount} with confirmed log date.`);
         setBtnSuccess('✓ Done');
         setDownloadDisabled(heatmapBtn, courseRegistry.length === 0);
+        setDownloadDisabled(dateModeBtn, tableData.length === 0);
 
         updateTabCounts();
         activeTab = 'all';
