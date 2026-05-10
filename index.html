@@ -305,6 +305,98 @@
     </div>
 </div>
 
+<!-- ── Grade Level Manager Backdrop + Modal ──────────────────────────────────── -->
+<div
+    class="modal-backdrop modal-overlay"
+    x-show="gradeLevelOpen"
+    x-cloak
+    x-transition:enter="transition-opacity ease-out duration-200"
+    x-transition:enter-start="opacity-0"
+    x-transition:enter-end="opacity-100"
+    x-transition:leave="transition-opacity ease-in duration-150"
+    x-transition:leave-start="opacity-100"
+    x-transition:leave-end="opacity-0"
+    @click.self="gradeLevelOpen = false"
+    @keydown.escape.window="gradeLevelOpen = false"
+    @gradelevel-close.window="gradeLevelOpen = false">
+
+    <div id="gradeLevelModal" class="tech-card modal-card-lg" x-data="gradeLevelApp()"
+         @click.stop>
+
+        <!-- Modal header -->
+        <div class="modal-header">
+            <div class="modal-title-row-lg">
+                <img src="src/icons/notebook.svg" width="15" height="15" class="icon-img" alt="">
+                <span class="tech-title modal-title">Grade Level Manager</span>
+                <span x-show="status === 'saving'" x-cloak class="modal-status-saving">saving…</span>
+                <span x-show="status === 'saved'"  x-cloak class="modal-status-saved">✓ saved</span>
+                <span x-show="status === 'error'"  x-cloak class="modal-status-error">save failed</span>
+            </div>
+            <button @click="$dispatch('gradelevel-close')" class="header-icon-btn modal-close-btn" title="Close">
+                <img src="src/icons/x.svg" width="13" height="13" class="icon-img" alt="">
+            </button>
+        </div>
+
+        <!-- Inline error -->
+        <div x-show="error" x-cloak class="modal-error-bar">
+            <span class="modal-error-text" x-text="error"></span>
+            <button @click="error = ''" class="modal-error-dismiss">×</button>
+        </div>
+
+        <!-- Add new grade level -->
+        <div class="modal-add-section">
+            <div class="modal-section-label">Add Grade Level</div>
+            <div class="modal-add-row">
+                <input type="text" class="tech-input modal-add-input" x-model="newGradeLevelName"
+                    placeholder="Grade level name"
+                    @keydown.enter="addGradeLevel()">
+                <input type="text" class="tech-input modal-add-input" x-model="newGradeLevelKeyword"
+                    placeholder="First keyword (optional)"
+                    @keydown.enter="addGradeLevel()">
+                <button @click="addGradeLevel()" class="tech-btn btn-add">+ Add</button>
+            </div>
+        </div>
+
+        <!-- Grade levels list — scrollable -->
+        <div class="modal-list">
+            <template x-for="gradeLevel in gradeLevels" :key="gradeLevel.name">
+                <div class="modal-list-item">
+
+                    <!-- Name row -->
+                    <div class="list-item-header">
+                        <span class="item-name" x-text="gradeLevel.name"></span>
+                        <template x-if="!gradeLevel.isDefault">
+                            <button @click="deleteGradeLevel(gradeLevel.name)" class="btn-remove">× Remove</button>
+                        </template>
+                        <template x-if="gradeLevel.isDefault">
+                            <span class="badge-default">default</span>
+                        </template>
+                    </div>
+
+                    <!-- Keywords -->
+                    <div class="keywords-row">
+                        <template x-for="kw in gradeLevel.keywords" :key="kw">
+                            <span class="keyword-chip">
+                                <span x-text="kw"></span>
+                                <button @click="removeKeyword(gradeLevel.name, kw)" class="keyword-remove-btn">×</button>
+                            </span>
+                        </template>
+                        <input type="text"
+                            :value="keywordInputs[gradeLevel.name] || ''"
+                            @input="keywordInputs[gradeLevel.name] = $event.target.value"
+                            @keydown.enter="addKeyword(gradeLevel.name)"
+                            placeholder="+ keyword"
+                            class="tech-input keyword-input">
+                        <button @click="addKeyword(gradeLevel.name)" class="btn-add-keyword">Add</button>
+                    </div>
+
+                </div>
+            </template>
+        </div>
+
+    </div>
+</div>
+
 <!-- ── Heatmap day tooltip ───────────────────────────────────────────────────── -->
 <div id="hmTooltip" class="hm-tooltip" style="display:none">
     <div class="hm-tooltip-header"></div>
@@ -401,6 +493,10 @@
                     <button @click="subjectOpen = true; settingsMenuOpen = false" class="settings-dropdown-item">
                         <img src="src/icons/notebook.svg" width="14" height="14" class="icon-img" alt="">
                         Manage Subject
+                    </button>
+                    <button @click="gradeLevelOpen = true; settingsMenuOpen = false" class="settings-dropdown-item">
+                        <img src="src/icons/notebook.svg" width="14" height="14" class="icon-img" alt="">
+                        Manage Grade Levels
                     </button>
                     <button @click="strategyOpen = true; settingsMenuOpen = false" class="settings-dropdown-item">
                         <img src="src/icons/logs.svg" width="14" height="14" class="icon-img" alt="">
@@ -499,8 +595,17 @@
                 </button>
 
                 <!-- Date Mode toggle -->
-                <button id="dateModeBtn" class="tech-btn btn-icon-only" title="Switch to Peak Date" disabled>
-                    <img src="src/icons/arrow-down-up.svg" width="13" height="13" class="icon-img" alt="">
+                <button id="dateModeBtn" class="date-mode-toggle" title="Switch to Creation Date" disabled>
+                    <span class="dmt-track">
+                        <span class="dmt-indicator"></span>
+                        <span class="dmt-label dmt-creation">Creation</span>
+                        <span class="dmt-label dmt-peak">Peak</span>
+                    </span>
+                </button>
+
+                <!-- Column visibility -->
+                <button id="colVisBtn" class="tech-btn btn-icon-only" title="Show/hide columns" disabled>
+                    <img src="src/icons/funnel.svg" width="13" height="13" class="icon-img" alt="">
                 </button>
 
                 <!-- Row count -->
@@ -515,13 +620,14 @@
                 <thead>
                     <tr class="table-head-row">
                         <th class="th-cell-nowrap">#</th>
-                        <th data-sort="rawTs" class="th-cell-nowrap">Date<span class="sort-ind">⇅</span><span id="dateFilterIcon" class="type-filter-icon" title="Filter by date"><svg width="11" height="11" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg></span></th>
-                        <th data-sort="fullname" class="th-cell">User<span class="sort-ind">⇅</span></th>
-                        <th data-sort="activityType" class="th-cell-nowrap">Activity Type<span class="sort-ind">⇅</span><span id="typeFilterIcon" class="type-filter-icon" title="Filter by activity type"><svg width="11" height="11" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M3 6h18M6 12h12M10 18h4"/></svg></span></th>
-                        <th data-sort="activityName" class="th-cell">Activity Name<span class="sort-ind">⇅</span></th>
-                        <th data-sort="subject" class="th-cell-nowrap">Subject<span class="sort-ind">⇅</span></th>
-                        <th id="thStrategy" class="th-cell-nowrap th-strategy">Strategy</th>
-                        <th class="th-cell-center" title="Logs">
+                        <th data-sort="rawTs" data-col="date" class="th-cell-nowrap">Date<span class="sort-ind">⇅</span><span id="dateFilterIcon" class="type-filter-icon" title="Filter by date"><svg width="11" height="11" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg></span></th>
+                        <th data-sort="fullname" data-col="user" class="th-cell">User<span class="sort-ind">⇅</span></th>
+                        <th data-sort="activityType" data-col="activityType" class="th-cell-nowrap">Activity Type<span class="sort-ind">⇅</span><span id="typeFilterIcon" class="type-filter-icon" title="Filter by activity type"><svg width="11" height="11" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M3 6h18M6 12h12M10 18h4"/></svg></span></th>
+                        <th data-sort="activityName" data-col="activityName" class="th-cell">Activity Name<span class="sort-ind">⇅</span></th>
+                        <th data-sort="subject" data-col="subject" class="th-cell-nowrap">Subject<span class="sort-ind">⇅</span></th>
+                        <th data-sort="gradeLevel" data-col="gradeLevel" class="th-cell-nowrap">Grade Level<span class="sort-ind">⇅</span></th>
+                        <th id="thStrategy" data-col="strategy" class="th-cell-nowrap th-strategy">Strategy</th>
+                        <th data-col="logs" class="th-cell-center" title="Logs">
                             <img src="src/icons/external-link.svg" width="13" height="13" class="icon-img th-icon-muted" alt="">
                         </th>
                     </tr>
@@ -581,6 +687,7 @@ function credentialsApp() {
         open:             false,
         strategyOpen:     false,
         subjectOpen:      false,
+        gradeLevelOpen:   false,
         settingsMenuOpen: false,
         settingsHideTimer: null,
         modalToken:   '',
@@ -897,6 +1004,94 @@ function subjectApp() {
         });
         this.status = 'saved';
         window.dispatchEvent(new CustomEvent('subjects-updated'));
+        setTimeout(() => this.status = '', 2000);
+      } catch {
+        this.status = 'error';
+      }
+    }
+  };
+}
+</script>
+
+<script>
+function gradeLevelApp() {
+  return {
+    gradeLevels: [],
+    newGradeLevelName: '',
+    newGradeLevelKeyword: '',
+    keywordInputs: {},
+    status: '',
+    error: '',
+
+    async init() {
+      const res = await fetch('/gradelevels');
+      const data = await res.json();
+      this.gradeLevels = data.gradelevels || [];
+    },
+
+    isKeywordDuplicate(keyword, excludeName = null) {
+      const kw = keyword.trim().toLowerCase();
+      for (const g of this.gradeLevels) {
+        if (g.name === excludeName) continue;
+        if (g.keywords.map(k => k.toLowerCase()).includes(kw)) return g.name;
+      }
+      return null;
+    },
+
+    async addKeyword(gradeLevelName) {
+      const kw = (this.keywordInputs[gradeLevelName] || '').trim();
+      if (!kw) return;
+      const owner = this.isKeywordDuplicate(kw);
+      if (owner) { this.error = `"${kw}" is already used by "${owner}"`; return; }
+      this.error = '';
+      const g = this.gradeLevels.find(g => g.name === gradeLevelName);
+      if (g) g.keywords.push(kw);
+      this.keywordInputs[gradeLevelName] = '';
+      await this.save();
+    },
+
+    removeKeyword(gradeLevelName, keyword) {
+      const g = this.gradeLevels.find(g => g.name === gradeLevelName);
+      if (g) g.keywords = g.keywords.filter(k => k !== keyword);
+      this.save();
+    },
+
+    async addGradeLevel() {
+      const name = this.newGradeLevelName.trim();
+      const kw   = this.newGradeLevelKeyword.trim();
+      if (!name) return;
+      if (this.gradeLevels.find(g => g.name.toLowerCase() === name.toLowerCase())) {
+        this.error = `Grade level "${name}" already exists.`; return;
+      }
+      if (kw) {
+        const owner = this.isKeywordDuplicate(kw);
+        if (owner) { this.error = `"${kw}" is already used by "${owner}"`; return; }
+      }
+      this.error = '';
+      this.gradeLevels.push({ name, keywords: kw ? [kw] : [], isDefault: false });
+      this.newGradeLevelName = '';
+      this.newGradeLevelKeyword = '';
+      await this.save();
+    },
+
+    deleteGradeLevel(name) {
+      const g = this.gradeLevels.find(g => g.name === name);
+      if (g && g.isDefault) return;
+      this.gradeLevels = this.gradeLevels.filter(g => g.name !== name);
+      this.save();
+    },
+
+    async save() {
+      this.status = 'saving';
+      try {
+        const isLocal = location.hostname === 'localhost' || location.hostname === '127.0.0.1';
+        await fetch(isLocal ? '/gradelevels' : '/api/gradelevels', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ gradelevels: this.gradeLevels })
+        });
+        this.status = 'saved';
+        window.dispatchEvent(new CustomEvent('gradelevels-updated'));
         setTimeout(() => this.status = '', 2000);
       } catch {
         this.status = 'error';
