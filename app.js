@@ -12,6 +12,7 @@ const dupUrlConfirmBtn = document.getElementById('dupUrlConfirmBtn');
 const dupUrlCancelBtn  = document.getElementById('dupUrlCancelBtn');
 const heatmapBtn          = document.getElementById('heatmapBtn');
 const dateModeBtn         = document.getElementById('dateModeBtn');
+const colVisBtn           = document.getElementById('colVisBtn');
 const heatmapModal        = document.getElementById('heatmapModal');
 const heatmapCloseBtn     = document.getElementById('heatmapCloseBtn');
 const heatmapCourseSelect = document.getElementById('heatmapCourseSelect');
@@ -35,21 +36,27 @@ let snapshotAllData      = [];
 let snapshotTeacherData  = [];
 let snapshotOerData      = [];
 let snapshotHiddenTypes  = new Set();
-let snapshotHiddenYears  = new Set();
-let snapshotHiddenMonths = new Set();
+let snapshotHiddenCols   = new Set();
+let snapshotDateFrom     = null;
+let snapshotDateTo       = null;
 let activeTab        = 'all'; // 'all' | 'teachers' | 'oer'
 let dateMode         = 'peak'; // 'creation' | 'peak'
-let sortCol          = null;       // null | 'rawTs' | 'fullname' | 'activityName' | 'activityType' | 'subject' | 'strategy'
+let sortCol          = null;       // null | 'rawTs' | 'fullname' | 'activityName' | 'activityType' | 'subject' | 'gradeLevel' | 'strategy'
 let sortDir          = 'asc';      // 'asc' | 'desc'
 let currentRows      = [];
 let activeStrategies = [];
 let activeSubjects   = [];
+let activeGradeLevels = [];
 let initReady; // resolves when strategies and subjects are loaded
 let hiddenTypes      = new Set();
-let hiddenYears      = new Set();
-let hiddenMonths     = new Set();
+let hiddenCols       = new Set();
+let dateFrom         = null; // YYYY-MM-DD | null
+let dateTo           = null; // YYYY-MM-DD | null
+let autoDateFrom     = null; // full-range min, recomputed on fetch/mode switch
+let autoDateTo       = null; // full-range max
 let filterDropdown     = null;
 let dateFilterDropdown = null;
+let colVisDropdown     = null;
 let heatmapCourses       = [];
 let heatmapCourseIdx     = 0;
 let hmTooltipHideTimer   = null;
@@ -92,6 +99,8 @@ const MODULE_FULLNAMES = {
 const modFullName = m => MODULE_FULLNAMES[m] || (m ? m.charAt(0).toUpperCase()+m.slice(1) : 'Unknown');
 const MONTH_NAMES  = ['January','February','March','April','May','June','July','August','September','October','November','December'];
 const MONTH_SHORT  = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+const COL_KEYS     = ['date','user','activityType','activityName','subject','gradeLevel','strategy','logs'];
+const COL_LABELS   = { date:'Date', user:'User', activityType:'Activity Type', activityName:'Activity Name', subject:'Subject', gradeLevel:'Grade Level', strategy:'Strategy', logs:'Logs' };
 
 // ── Strategies — in-memory fallback seed ─────────────────────────────────────
 
@@ -199,6 +208,37 @@ function getSubject(courseName, activityName = '', sectionName = '') {
     return 'Uncategorized';
 }
 
+// ── Grade Levels — in-memory fallback seed ───────────────────────────────────
+
+const DEFAULT_GRADE_LEVELS = [
+    { name:'Grade 7',  keywords:['Grade 7', 'G7', 'Gr. 7', 'Grade7', 'Gr7'],   isDefault:true },
+    { name:'Grade 8',  keywords:['Grade 8', 'G8', 'Gr. 8', 'Grade8', 'Gr8'],   isDefault:true },
+    { name:'Grade 9',  keywords:['Grade 9', 'G9', 'Gr. 9', 'Grade9', 'Gr9'],   isDefault:true },
+    { name:'Grade 10', keywords:['Grade 10','G10','Gr. 10','Grade10','Gr10'],   isDefault:true },
+    { name:'Grade 11', keywords:['Grade 11','G11','Gr. 11','Grade11','Gr11'],   isDefault:true },
+    { name:'Grade 12', keywords:['Grade 12','G12','Gr. 12','Grade12','Gr12'],   isDefault:true },
+];
+
+async function loadGradeLevels() {
+    try {
+        const res = await fetch(isLocal() ? '/gradelevels' : '/api/gradelevels');
+        if (!res.ok) throw new Error();
+        const data = await res.json();
+        activeGradeLevels = Array.isArray(data) ? data : data.gradelevels;
+    } catch (_) {
+        activeGradeLevels = DEFAULT_GRADE_LEVELS;
+    }
+}
+
+function getGradeLevel(courseName) {
+    if (!courseName) return '';
+    const name = courseName.toLowerCase();
+    for (const g of activeGradeLevels) {
+        if (g.keywords?.some(kw => name.includes(kw.toLowerCase()))) return g.name;
+    }
+    return '';
+}
+
 // ── UI helpers ────────────────────────────────────────────────────────────────
 
 function isDarkMode() {
@@ -246,6 +286,13 @@ function escapeHtml(s) {
     if (!s) return '';
     return String(s).replace(/[&<>"']/g, c =>
         ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+}
+
+function decodeHtmlEntities(s) {
+    if (!s) return '';
+    const ta = document.createElement('textarea');
+    ta.innerHTML = s;
+    return ta.value;
 }
 
 function formatDate(ts) {
@@ -541,6 +588,7 @@ async function buildRows(sections, baseUrl, courseId, token, sessionCookie, fall
         const dateSource = creation?.dateSource || 'ESTIMATED';
         const eventLabel = creation?.eventLabel || 'Module metadata (mod.added)';
         const sectionName = modSection.get(mod.id) || '';
+        const modName     = decodeHtmlEntities(mod.name) || `Unnamed ${mod.modname}`;
         return {
             date:             creation?.date      || formatDate(mod.added || mod.timecreated || mod.timemodified || 0),
             rawTs:            parseDateStrToTs(creation?.date) || mod.added || mod.timecreated || 0,
@@ -551,11 +599,12 @@ async function buildRows(sections, baseUrl, courseId, token, sessionCookie, fall
             profileUrl:       creation?.profileUrl || fallbackUser?.profileUrl || null,
             peakDate:         logData?.peak?.date  || null,
             peakCount:        logData?.peak?.count || 0,
-            activityName:     mod.name            || `Unnamed ${mod.modname}`,
+            activityName:     modName,
             activityUrl:      activityViewUrl(mod, baseUrl),
             activityType:     activityTypeLabel(mod.modname, mod),
-            strategy:         getStrategy(mod.name || ''),
-            subject:          getSubject(courseName, mod.name || '', sectionName),
+            strategy:         getStrategy(modName),
+            subject:          getSubject(courseName, modName, sectionName),
+            gradeLevel:       getGradeLevel(courseName),
             sectionName,
             modname:          mod.modname         || '',
             courseIndex:      i,
@@ -630,6 +679,7 @@ function buildDataRow(row, idx) {
 
     const tdDate = document.createElement('td');
     tdDate.className = 'td-date';
+    tdDate.dataset.col = 'date';
     const BADGE_TEXT = { VERIFIED: 'LOG', INFERRED: 'FIRST', ESTIMATED: 'EST', PEAK: 'PEAK' };
     let dateStr, badgeClass, badgeLabel, badgeTitle;
     if (dateMode === 'peak' && row.peakDate) {
@@ -653,22 +703,26 @@ function buildDataRow(row, idx) {
 
     const tdUser = document.createElement('td');
     tdUser.className = 'td-cell';
+    tdUser.dataset.col = 'user';
     tdUser.innerHTML = row.profileUrl
         ? `<a href="${escapeHtml(row.profileUrl)}" target="_blank" rel="noopener" class="table-link" style="color:${dark ? '#a78bfa' : '#0369a1'}">${escapeHtml(row.fullname)}</a>`
         : `<span style="color:${dark ? 'rgba(196,181,253,.75)' : '#475569'}">${escapeHtml(row.fullname)}</span>`;
 
     const tdName = document.createElement('td');
     tdName.className = 'td-cell';
+    tdName.dataset.col = 'activityName';
     tdName.innerHTML = row.activityUrl
         ? `<a href="${escapeHtml(row.activityUrl)}" target="_blank" rel="noopener" class="table-link" style="color:${dark ? '#c4b5fd' : '#7c3aed'}">${escapeHtml(row.activityName)}</a>`
         : `<span class="table-text-muted" style="color:${dark ? '#e2e8f0' : '#334155'}">${escapeHtml(row.activityName)}</span>`;
 
     const tdType = document.createElement('td');
     tdType.className = 'td-cell';
+    tdType.dataset.col = 'activityType';
     tdType.innerHTML = `<span class="activity-type-chip">${escapeHtml(row.activityType)}</span>`;
 
     const tdSubject = document.createElement('td');
     tdSubject.className = 'td-cell';
+    tdSubject.dataset.col = 'subject';
     const subjectLink = document.createElement('a');
     subjectLink.href    = `${row.courseBaseUrl}/course/view.php?id=${row.courseId}`;
     subjectLink.target  = '_blank';
@@ -681,8 +735,24 @@ function buildDataRow(row, idx) {
     subjectLink.onmouseout  = () => subjectLink.style.textDecoration = 'none';
     tdSubject.appendChild(subjectLink);
 
+    const tdGradeLevel = document.createElement('td');
+    tdGradeLevel.className = 'td-cell';
+    tdGradeLevel.dataset.col = 'gradeLevel';
+    const gradeLevelLink = document.createElement('a');
+    gradeLevelLink.href    = `${row.courseBaseUrl}/course/view.php?id=${row.courseId}`;
+    gradeLevelLink.target  = '_blank';
+    gradeLevelLink.rel     = 'noopener';
+    gradeLevelLink.title   = row.courseName || '';
+    gradeLevelLink.textContent = row.gradeLevel || '—';
+    gradeLevelLink.className = 'subject-link';
+    gradeLevelLink.style.color = dark ? '#a78bfa' : '#7c3aed';
+    gradeLevelLink.onmouseover = () => gradeLevelLink.style.textDecoration = 'underline';
+    gradeLevelLink.onmouseout  = () => gradeLevelLink.style.textDecoration = 'none';
+    tdGradeLevel.appendChild(gradeLevelLink);
+
     const tdStrategy = document.createElement('td');
     tdStrategy.className = 'td-strategy';
+    tdStrategy.dataset.col = 'strategy';
     const strategySel = document.createElement('select');
     strategySel.className = 'strategy-sel';
     strategySel.title = row.strategy || '';
@@ -705,11 +775,12 @@ function buildDataRow(row, idx) {
 
     const tdLog = document.createElement('td');
     tdLog.className = 'td-log';
+    tdLog.dataset.col = 'logs';
     tdLog.innerHTML = `<a href="${escapeHtml(row.logUrl)}" target="_blank" rel="noopener" class="log-btn" title="View logs">
         <img src="src/icons/external-link.svg" width="13" height="13" class="icon-img" alt="">
     </a>`;
 
-    tr.append(tdNum, tdDate, tdUser, tdType, tdName, tdSubject, tdStrategy, tdLog);
+    tr.append(tdNum, tdDate, tdUser, tdType, tdName, tdSubject, tdGradeLevel, tdStrategy, tdLog);
     return tr;
 }
 
@@ -739,9 +810,11 @@ function updateScrollFade() {
     scrollFadeBottom.classList.toggle('scroll-fade-bottom--hidden', atBottom);
 }
 
+function getNCOLS() { return 9 - hiddenCols.size; }
+
 function renderTable(rows) {
     currentRows = rows || [];
-    const NCOLS = 8; // #, Date, User, Activity Name, Activity Type, Subject, Strategy, Logs
+    const NCOLS = getNCOLS();
     tbody.innerHTML = '';
     const frag = document.createDocumentFragment();
     const showSeparators = sortCol === null;
@@ -828,6 +901,7 @@ function renderTable(rows) {
 
     tbody.appendChild(frag);
     rowCountEl.textContent = `${visibleIdx} ${visibleIdx === 1 ? 'entry' : 'entries'}`;
+    applyColVisibility();
     requestAnimationFrame(updateScrollFade);
     requestAnimationFrame(updateStickyCourseBanner);
     requestAnimationFrame(setTabBarHeight);
@@ -867,12 +941,13 @@ function updateHeaderSortUI() {
 function applyAndRender() {
     const sorted = applyHeaderSort(getActiveRows());
     let rows = hiddenTypes.size > 0 ? sorted.filter(r => !hiddenTypes.has(r.activityType)) : sorted;
-    if (hiddenYears.size > 0 || hiddenMonths.size > 0) {
+    if (dateFrom || dateTo) {
         rows = rows.filter(r => {
-            const parts = (r.date || '').split('/');
-            if (parts.length !== 3) return true;
-            const [mm, , yyyy] = parts;
-            return !hiddenYears.has(yyyy) && !hiddenMonths.has(mm);
+            const key = rowDateKey(r);
+            if (!key) return false;
+            if (dateFrom && key < dateFrom) return false;
+            if (dateTo   && key > dateTo)   return false;
+            return true;
         });
     }
     renderTable(rows);
@@ -895,7 +970,7 @@ function updateFilterUI() {
 
 function updateDateFilterUI() {
     const icon = document.getElementById('dateFilterIcon');
-    if (icon) icon.classList.toggle('filter-active', hiddenYears.size > 0 || hiddenMonths.size > 0);
+    if (icon) icon.classList.toggle('filter-active', dateFrom !== autoDateFrom || dateTo !== autoDateTo);
 }
 
 function closeFilterDropdown() {
@@ -904,6 +979,101 @@ function closeFilterDropdown() {
 
 function closeDateFilterDropdown() {
     if (dateFilterDropdown) { dateFilterDropdown.remove(); dateFilterDropdown = null; }
+}
+
+// Convert a row's active date field (MM/DD/YYYY) → YYYY-MM-DD, or null
+function rowDateKey(row) {
+    const raw = dateMode === 'peak' ? row.peakDate : row.date;
+    if (!raw) return null;
+    const parts = raw.split('/');
+    if (parts.length !== 3) return null;
+    const [mm, dd, yyyy] = parts;
+    return `${yyyy}-${mm.padStart(2, '0')}-${dd.padStart(2, '0')}`;
+}
+
+// Returns { min, max } as YYYY-MM-DD strings over the given rows
+function computeDateRange(rows) {
+    let min = null, max = null;
+    rows.forEach(r => {
+        const key = rowDateKey(r);
+        if (!key) return;
+        if (!min || key < min) min = key;
+        if (!max || key > max) max = key;
+    });
+    return { min, max };
+}
+
+function closeColVisDropdown() {
+    if (colVisDropdown) { colVisDropdown.remove(); colVisDropdown = null; }
+}
+
+function updateColVisUI() {
+    if (colVisBtn) colVisBtn.classList.toggle('col-vis-btn--active', hiddenCols.size > 0);
+}
+
+function applyColVisibility() {
+    document.querySelectorAll('thead th[data-col]').forEach(th => {
+        th.style.display = hiddenCols.has(th.dataset.col) ? 'none' : '';
+    });
+    document.querySelectorAll('#reportTbody td[data-col]').forEach(td => {
+        td.style.display = hiddenCols.has(td.dataset.col) ? 'none' : '';
+    });
+    const ncols = getNCOLS();
+    document.querySelectorAll('#reportTbody td[colspan]').forEach(td => {
+        td.colSpan = ncols;
+    });
+}
+
+function toggleColVisDropdown(anchor) {
+    if (colVisDropdown) { closeColVisDropdown(); return; }
+
+    const dd = document.createElement('div');
+    dd.className = 'filter-dropdown';
+
+    const hdr = document.createElement('div');
+    hdr.className = 'filter-dropdown-header';
+    const hdrText = document.createElement('span');
+    hdrText.textContent = 'Show Columns';
+    const resetBtn = document.createElement('button');
+    resetBtn.textContent = 'Show all';
+    resetBtn.className = 'filter-reset-btn';
+    resetBtn.addEventListener('click', e => {
+        e.stopPropagation();
+        hiddenCols.clear();
+        dd.querySelectorAll('input[type=checkbox]').forEach(cb => { cb.checked = true; });
+        applyColVisibility();
+        updateColVisUI();
+    });
+    hdr.append(hdrText, resetBtn);
+    dd.appendChild(hdr);
+
+    const list = document.createElement('div');
+    list.className = 'filter-dropdown-list';
+    COL_KEYS.forEach(key => {
+        const lbl = document.createElement('label');
+        lbl.className = 'filter-item';
+        const cb = document.createElement('input');
+        cb.type = 'checkbox';
+        cb.checked = !hiddenCols.has(key);
+        cb.className = 'filter-checkbox';
+        cb.addEventListener('change', () => {
+            if (cb.checked) hiddenCols.delete(key); else hiddenCols.add(key);
+            applyColVisibility();
+            updateColVisUI();
+        });
+        lbl.append(cb, document.createTextNode(COL_LABELS[key]));
+        list.appendChild(lbl);
+    });
+    dd.appendChild(list);
+    dd.addEventListener('click', e => e.stopPropagation());
+    document.body.appendChild(dd);
+    colVisDropdown = dd;
+
+    const rect = anchor.getBoundingClientRect();
+    dd.style.left = Math.min(rect.left, window.innerWidth - 230) + 'px';
+    dd.style.top  = (rect.bottom + 6) + 'px';
+
+    setTimeout(() => document.addEventListener('click', closeColVisDropdown, { once: true }), 0);
 }
 
 // ── Heatmap modal ─────────────────────────────────────────────────────────────
@@ -924,6 +1094,10 @@ function openHeatmapModal(targetGroupIndex = null) {
     }));
 
     heatmapCourseSelect.innerHTML = '';
+    const allOpt = document.createElement('option');
+    allOpt.value = -1;
+    allOpt.textContent = 'All Courses';
+    heatmapCourseSelect.appendChild(allOpt);
     heatmapCourses.forEach((c, i) => {
         const opt = document.createElement('option');
         opt.value = i;
@@ -931,7 +1105,7 @@ function openHeatmapModal(targetGroupIndex = null) {
         heatmapCourseSelect.appendChild(opt);
     });
 
-    let startIdx = 0;
+    let startIdx = -1; // default: All Courses
     if (targetGroupIndex !== null) {
         const found = courseRegistry.findIndex(g => g.courseGroupIndex === targetGroupIndex);
         if (found >= 0) startIdx = found;
@@ -949,7 +1123,9 @@ function renderHeatmapForCourse(idx) {
     heatmapCourseIdx = idx;
     heatmapCourseSelect.value = idx;
 
-    const { rows } = heatmapCourses[idx];
+    const rows = idx === -1
+        ? heatmapCourses.flatMap(c => c.rows)
+        : heatmapCourses[idx].rows;
 
     heatmapContent.innerHTML = '';
     if (!rows.length) {
@@ -1186,6 +1362,13 @@ function hideHmTooltip() {
 function updateHeatmapNav() {
     const idx   = heatmapCourseIdx;
     const total = heatmapCourses.length;
+
+    if (idx === -1) {
+        heatmapPrevBtn.style.visibility = 'hidden';
+        heatmapNextBtn.style.visibility = 'hidden';
+        return;
+    }
+
     const hasPrev = idx > 0;
     const hasNext = idx < total - 1;
 
@@ -1203,6 +1386,9 @@ function toggleFilterDropdown(anchor) {
     const types = [...new Set(rows.map(r => r.activityType))].sort();
     if (!types.length) return;
 
+    const typeCount = {};
+    rows.forEach(r => { typeCount[r.activityType] = (typeCount[r.activityType] || 0) + 1; });
+
     const dd = document.createElement('div');
     dd.className = 'filter-dropdown';
 
@@ -1217,7 +1403,6 @@ function toggleFilterDropdown(anchor) {
         e.stopPropagation();
         hiddenTypes.clear();
         dd.querySelectorAll('input[type=checkbox]').forEach(cb => { cb.checked = true; });
-        console.log('[filter] reset — showing all types');
         applyAndRender();
     });
     hdr.append(hdrText, resetBtn);
@@ -1234,10 +1419,12 @@ function toggleFilterDropdown(anchor) {
         cb.className = 'filter-checkbox';
         cb.addEventListener('change', () => {
             if (cb.checked) hiddenTypes.delete(type); else hiddenTypes.add(type);
-            console.log(`[filter] "${type}" ${cb.checked ? 'shown' : 'hidden'} — hiddenTypes size: ${hiddenTypes.size}`);
             applyAndRender();
         });
-        lbl.append(cb, document.createTextNode(type));
+        const countSpan = document.createElement('span');
+        countSpan.className = 'filter-count';
+        countSpan.textContent = `(${typeCount[type] || 0})`;
+        lbl.append(cb, document.createTextNode(type), countSpan);
         list.appendChild(lbl);
     });
     dd.appendChild(list);
@@ -1254,73 +1441,77 @@ function toggleFilterDropdown(anchor) {
 
 function toggleDateFilterDropdown(anchor) {
     if (dateFilterDropdown) { closeDateFilterDropdown(); return; }
-
-    const rows = getActiveRows();
-    const yearSet  = new Set();
-    const monthSet = new Set();
-    rows.forEach(r => {
-        const parts = (r.date || '').split('/');
-        if (parts.length === 3) { monthSet.add(parts[0]); yearSet.add(parts[2]); }
-    });
-    const years  = [...yearSet].sort((a, b) => parseInt(b) - parseInt(a));
-    const months = [...monthSet].sort((a, b) => parseInt(a) - parseInt(b));
-    if (!years.length && !months.length) return;
+    if (!autoDateFrom && !autoDateTo) return;
 
     const dd = document.createElement('div');
-    dd.className = 'filter-dropdown-date';
+    dd.className = 'filter-dropdown';
 
     const hdr = document.createElement('div');
     hdr.className = 'filter-dropdown-header';
-    const hdrText  = document.createElement('span');
+    const hdrText = document.createElement('span');
     hdrText.textContent = 'Filter by Date';
     const clearBtn = document.createElement('button');
-    clearBtn.textContent = 'Show all';
+    clearBtn.textContent = 'Reset';
     clearBtn.className = 'filter-reset-btn';
     clearBtn.addEventListener('click', e => {
         e.stopPropagation();
-        hiddenYears.clear();
-        hiddenMonths.clear();
-        dd.querySelectorAll('input[type=checkbox]').forEach(cb => { cb.checked = true; });
+        dateFrom = autoDateFrom;
+        dateTo   = autoDateTo;
+        fromInput.value = dateFrom || '';
+        toInput.value   = dateTo   || '';
         applyAndRender();
+        updateDateFilterUI();
     });
     hdr.append(hdrText, clearBtn);
     dd.appendChild(hdr);
 
-    const list = document.createElement('div');
-    list.className = 'filter-dropdown-list-tall';
+    const body = document.createElement('div');
+    body.className = 'date-range-body';
 
-    function addSection(title, items, hiddenSet, keyOf, labelOf) {
-        const sHdr = document.createElement('div');
-        sHdr.className = 'filter-section-header';
-        sHdr.textContent = title;
-        list.appendChild(sHdr);
-        items.forEach(item => {
-            const key = keyOf(item);
-            const lbl = document.createElement('label');
-            lbl.className = 'filter-item';
-            const cb = document.createElement('input');
-            cb.type    = 'checkbox';
-            cb.checked = !hiddenSet.has(key);
-            cb.className = 'filter-checkbox';
-            cb.addEventListener('change', () => {
-                if (cb.checked) hiddenSet.delete(key); else hiddenSet.add(key);
-                applyAndRender();
-            });
-            lbl.append(cb, document.createTextNode(labelOf(item)));
-            list.appendChild(lbl);
-        });
-    }
+    const fromRow = document.createElement('div');
+    fromRow.className = 'date-range-row';
+    const fromLabel = document.createElement('span');
+    fromLabel.className = 'date-range-label';
+    fromLabel.textContent = 'From';
+    const fromInput = document.createElement('input');
+    fromInput.type = 'date';
+    fromInput.className = 'date-range-input';
+    fromInput.value = dateFrom || '';
+    if (autoDateFrom) fromInput.min = autoDateFrom;
+    if (autoDateTo)   fromInput.max = autoDateTo;
+    fromInput.addEventListener('change', () => {
+        dateFrom = fromInput.value || null;
+        applyAndRender();
+        updateDateFilterUI();
+    });
+    fromRow.append(fromLabel, fromInput);
 
-    if (years.length)  addSection('Year',  years,  hiddenYears,  y => y, y => y);
-    if (months.length) addSection('Month', months, hiddenMonths, m => m, m => MONTH_NAMES[parseInt(m, 10) - 1] || m);
+    const toRow = document.createElement('div');
+    toRow.className = 'date-range-row';
+    const toLabel = document.createElement('span');
+    toLabel.className = 'date-range-label';
+    toLabel.textContent = 'To';
+    const toInput = document.createElement('input');
+    toInput.type = 'date';
+    toInput.className = 'date-range-input';
+    toInput.value = dateTo || '';
+    if (autoDateFrom) toInput.min = autoDateFrom;
+    if (autoDateTo)   toInput.max = autoDateTo;
+    toInput.addEventListener('change', () => {
+        dateTo = toInput.value || null;
+        applyAndRender();
+        updateDateFilterUI();
+    });
+    toRow.append(toLabel, toInput);
 
-    dd.appendChild(list);
+    body.append(fromRow, toRow);
+    dd.appendChild(body);
     dd.addEventListener('click', e => e.stopPropagation());
     document.body.appendChild(dd);
     dateFilterDropdown = dd;
 
     const rect = anchor.getBoundingClientRect();
-    dd.style.left = Math.min(rect.left, window.innerWidth - 200) + 'px';
+    dd.style.left = Math.min(rect.left, window.innerWidth - 230) + 'px';
     dd.style.top  = (rect.bottom + 6) + 'px';
 
     setTimeout(() => document.addEventListener('click', closeDateFilterDropdown, { once: true }), 0);
@@ -1349,15 +1540,18 @@ function coursePrefix(name) {
 
 function exportCSV(rows, filename, label = '') {
     if (!rows.length) { setStatus('Nothing to export.', true); return; }
-    const hdr  = ['Date', 'User', 'Activity Type', 'Activity Name', 'Subject', 'Strategy', 'Course Name', 'Activity URL'];
+    const dateHeader = dateMode === 'peak' ? 'Peak Date' : 'Creation Date';
+    const hdr  = [dateHeader, 'User', 'Activity Type', 'Activity Name', 'Subject', 'Grade Level', 'Strategy', 'Course Name', 'Activity URL'];
     const body = rows.map(r => {
         const prefix = coursePrefix(r.courseName);
+        const exportDate = dateMode === 'peak' && r.peakDate ? r.peakDate : r.date;
         return [
-            r.date,
+            exportDate,
             r.fullname,
             r.activityType,
             prefix + r.activityName,
             r.subject     || '',
+            r.gradeLevel  || '',
             r.strategy    || '',
             r.courseName  || '',
             r.activityUrl || '',
@@ -1390,8 +1584,9 @@ function resetTable() {
     teacherData  = [...snapshotTeacherData];
     oerData      = [...snapshotOerData];
     hiddenTypes  = new Set(snapshotHiddenTypes);
-    hiddenYears  = new Set(snapshotHiddenYears);
-    hiddenMonths = new Set(snapshotHiddenMonths);
+    hiddenCols   = new Set(snapshotHiddenCols);
+    dateFrom     = snapshotDateFrom;
+    dateTo       = snapshotDateTo;
     sortCol      = null;
     sortDir      = 'asc';
     activeTab    = 'all';
@@ -1399,6 +1594,7 @@ function resetTable() {
     updateTabUI();
     updateFilterUI();
     updateDateFilterUI();
+    updateColVisUI();
     renderActiveTab();
 }
 
@@ -1455,6 +1651,13 @@ dateModeBtn.addEventListener('click', () => {
     dateMode = dateMode === 'creation' ? 'peak' : 'creation';
     dateModeBtn.classList.toggle('date-mode-btn--active', dateMode === 'peak');
     dateModeBtn.title = dateMode === 'peak' ? 'Switch to Creation Date' : 'Switch to Peak Date';
+    if (tableData.length > 0) {
+        const { min, max } = computeDateRange(tableData);
+        autoDateFrom = min;
+        autoDateTo   = max;
+        dateFrom     = min;
+        dateTo       = max;
+    }
     renderActiveTab();
 });
 heatmapCloseBtn.addEventListener('click', closeHeatmapModal);
@@ -1468,12 +1671,13 @@ hmTooltip.addEventListener('mouseleave', hideHmTooltip);
 downloadBtn.addEventListener('click', () => {
     const sorted = applyHeaderSort(getActiveRows());
     let rows = hiddenTypes.size > 0 ? sorted.filter(r => !hiddenTypes.has(r.activityType)) : sorted;
-    if (hiddenYears.size > 0 || hiddenMonths.size > 0) {
+    if (dateFrom || dateTo) {
         rows = rows.filter(r => {
-            const parts = (r.date || '').split('/');
-            if (parts.length !== 3) return true;
-            const [mm, , yyyy] = parts;
-            return !hiddenYears.has(yyyy) && !hiddenMonths.has(mm);
+            const key = rowDateKey(r);
+            if (!key) return false;
+            if (dateFrom && key < dateFrom) return false;
+            if (dateTo   && key > dateTo)   return false;
+            return true;
         });
     }
     if (!rows.length) { setStatus('No rows to export. Please adjust your filter.', true); return; }
@@ -1499,8 +1703,16 @@ window.addEventListener('subjects-updated', async () => {
     }
 });
 
+window.addEventListener('gradelevels-updated', async () => {
+    await loadGradeLevels();
+    if (tableData.length > 0) {
+        tableData.forEach(r => { r.gradeLevel = getGradeLevel(r.courseName || ''); });
+        renderActiveTab();
+    }
+});
+
 document.addEventListener('DOMContentLoaded', async () => {
-    initReady = Promise.all([loadStrategies(), loadSubjects()]);
+    initReady = Promise.all([loadStrategies(), loadSubjects(), loadGradeLevels()]);
     await initReady;
 
     // Activity type filter icon
@@ -1518,6 +1730,14 @@ document.addEventListener('DOMContentLoaded', async () => {
         dateFilterIcon.addEventListener('click', e => {
             e.stopPropagation();
             toggleDateFilterDropdown(dateFilterIcon);
+        });
+    }
+
+    // Column visibility button
+    if (colVisBtn) {
+        colVisBtn.addEventListener('click', e => {
+            e.stopPropagation();
+            toggleColVisDropdown(colVisBtn);
         });
     }
 
@@ -1622,12 +1842,20 @@ fetchBtn.addEventListener('click', async () => {
     sortDir     = 'asc';
     closeFilterDropdown();
     closeDateFilterDropdown();
+    closeColVisDropdown();
+    hiddenCols   = new Set();
+    dateFrom     = null;
+    dateTo       = null;
+    autoDateFrom = null;
+    autoDateTo   = null;
+    updateColVisUI();
     document.getElementById('corsNotice').style.display = 'none';
     tbody.innerHTML = `<tr><td colspan="8" class="empty-state-cell">Loading…</td></tr>`;
     rowCountEl.textContent = 'loading…';
     setDownloadDisabled(downloadBtn, true);
     setDownloadDisabled(heatmapBtn, true);
     setDownloadDisabled(dateModeBtn, true);
+    setDownloadDisabled(colVisBtn, true);
     dateMode = 'peak';
     dateModeBtn.classList.add('date-mode-btn--active');
     dateModeBtn.title = 'Switch to Creation Date';
@@ -1686,21 +1914,23 @@ fetchBtn.addEventListener('click', async () => {
         teacherData = tableData.filter(r => r.modname !== 'url');
         oerData     = tableData.filter(r => r.modname === 'url');
 
-        // Default type filter: hide "Text and Media Area" if present in data
         hiddenTypes  = new Set();
-        hiddenYears  = new Set();
-        hiddenMonths = new Set();
-        if (new Set(tableData.map(r => r.activityType)).has('Text and Media Area')) {
-            hiddenTypes.add('Text and Media Area');
-        }
+        hiddenCols   = new Set();
+
+        const { min: rangeMin, max: rangeMax } = computeDateRange(tableData);
+        autoDateFrom = rangeMin;
+        autoDateTo   = rangeMax;
+        dateFrom     = rangeMin;
+        dateTo       = rangeMax;
 
         // Snapshot for Reset Table
         snapshotAllData      = [...allData];
         snapshotTeacherData  = [...teacherData];
         snapshotOerData      = [...oerData];
         snapshotHiddenTypes  = new Set(hiddenTypes);
-        snapshotHiddenYears  = new Set(hiddenYears);
-        snapshotHiddenMonths = new Set(hiddenMonths);
+        snapshotHiddenCols   = new Set(hiddenCols);
+        snapshotDateFrom     = dateFrom;
+        snapshotDateTo       = dateTo;
 
         if (N === 1 && allRows.length > 0) {
             const nameEl = document.getElementById('courseNameDisplay');
@@ -1714,6 +1944,7 @@ fetchBtn.addEventListener('click', async () => {
         setBtnSuccess('✓ Done');
         setDownloadDisabled(heatmapBtn, courseRegistry.length === 0);
         setDownloadDisabled(dateModeBtn, tableData.length === 0);
+        setDownloadDisabled(colVisBtn, tableData.length === 0);
 
         updateTabCounts();
         activeTab = 'all';
