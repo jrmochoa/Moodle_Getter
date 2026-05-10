@@ -1,0 +1,32 @@
+[
+  {
+    "name": "Grade 7",
+    "keywords": ["Grade 7", "G7", "Gr. 7", "Grade7", "Gr7"],
+    "isDefault": true
+  },
+  {
+    "name": "Grade 8",
+    "keywords": ["Grade 8", "G8", "Gr. 8", "Grade8", "Gr8"],
+    "isDefault": true
+  },
+  {
+    "name": "Grade 9",
+    "keywords": ["Grade 9", "G9", "Gr. 9", "Grade9", "Gr9"],
+    "isDefault": true
+  },
+  {
+    "name": "Grade 10",
+    "keywords": ["Grade 10", "G10", "Gr. 10", "Grade10", "Gr10"],
+    "isDefault": true
+  },
+  {
+    "name": "Grade 11",
+    "keywords": ["Grade 11", "G11", "Gr. 11", "Grade11", "Gr11"],
+    "isDefault": true
+  },
+  {
+    "name": "Grade 12",
+    "keywords": ["Grade 12", "G12", "Gr. 12", "Grade12", "Gr12"],
+    "isDefault": true
+  }
+]
